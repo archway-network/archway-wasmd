@@ -459,7 +459,7 @@ func TestContractInfoWasmQuerier(t *testing.T) {
 }
 
 func TestQueryErrors(t *testing.T) {
-	ctx, _ := CreateTestInput(t, false, AvailableCapabilities)
+	ctx, _ := keeper.CreateTestInput(t, false, keeper.AvailableCapabilities)
 	initialGasMeter := types.NewContractGasMeter(30000000, func(_ uint64, info types.GasConsumptionInfo) types.GasConsumptionInfo {
 		return types.GasConsumptionInfo{
 			SDKGas: info.SDKGas * 2,
