@@ -290,14 +290,13 @@ func (k Keeper) instantiate(
 	// 0x03 | BuildContractAddressClassic (sdk.AccAddress)
 	prefixStoreKey := types.GetContractStorePrefix(contractAddress)
 	prefixStore := types.PrefixStoreInfo{PrefixKey: prefixStoreKey, Store: ctx.MultiStore().GetKVStore(k.storeKey)}
-	vmStore := types.NewStoreAdapter(prefixStore)
 
 	// prepare querier
 	querier := k.newQueryHandler(ctx, contractAddress)
 
 	// instantiate wasm contract
 	gas := k.runtimeGasForContract(ctx)
-	res, gasUsed, err := k.wasmVM.Instantiate(ctx, codeInfo.CodeHash, env, info, initMsg, vmStore, cosmwasmAPI, &querier, k.gasMeter(ctx), gas, costJSONDeserialization)
+	res, gasUsed, err := k.wasmVM.Instantiate(ctx, codeInfo.CodeHash, env, info, initMsg, prefixStore, cosmwasmAPI, &querier, k.gasMeter(ctx), gas, costJSONDeserialization)
 	k.consumeRuntimeGas(ctx, gasUsed)
 	if err != nil {
 		return nil, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, err.Error())
@@ -430,9 +429,8 @@ func (k Keeper) migrate(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 	prefixStoreKey := types.GetContractStorePrefix(contractAddress)
 	prefixStore := types.PrefixStoreInfo{PrefixKey: prefixStoreKey, Store: ctx.MultiStore().GetKVStore(k.storeKey)}
-	vmStore := types.NewStoreAdapter(prefixStore)
 	gas := k.runtimeGasForContract(ctx)
-	res, gasUsed, err := k.wasmVM.Migrate(ctx, newCodeInfo.CodeHash, env, msg, vmStore, cosmwasmAPI, &querier, k.gasMeter(ctx), gas, costJSONDeserialization)
+	res, gasUsed, err := k.wasmVM.Migrate(ctx, newCodeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, &querier, k.gasMeter(ctx), gas, costJSONDeserialization)
 	k.consumeRuntimeGas(ctx, gasUsed)
 	if err != nil {
 		return nil, sdkerrors.Wrap(types.ErrMigrationFailed, err.Error())
