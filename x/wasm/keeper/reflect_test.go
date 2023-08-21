@@ -675,7 +675,7 @@ func TestQueryDenomsIntegration(t *testing.T) {
 			gotData, gotErr := k.QuerySmart(ctx, contractAddr, []byte(spec.query))
 			if spec.expErr != nil {
 				require.Error(t, gotErr)
-				assert.Contains(t, gotErr.Error(), fmt.Sprintf("codespace: %s, code: %d:", spec.expErr.Codespace(), spec.expErr.ABCICode()))
+				assert.Contains(t, gotErr.Error(), fmt.Sprintf("codespace: %s, code: %d", spec.expErr.Codespace(), spec.expErr.ABCICode()))
 				return
 			}
 			require.NoError(t, gotErr)
