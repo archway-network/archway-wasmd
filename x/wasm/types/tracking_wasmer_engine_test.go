@@ -103,11 +103,26 @@ type loggingVM struct {
 }
 
 func (l *loggingVM) Create(code cosmwasm.WasmCode) (cosmwasm.Checksum, error) {
+	panic("Deprecated: use StoreCode instead")
+}
+
+func (l *loggingVM) StoreCode(code cosmwasm.WasmCode) (cosmwasm.Checksum, error) {
 	if l.Fail {
 		return cosmwasm.Checksum{}, errTestFail
 	}
 	l.logs = append(l.logs, loggingVMLog{
-		MethodName: "Create",
+		MethodName: "StoreCode",
+		Message:    nil,
+	})
+	return cosmwasm.Checksum{}, nil
+}
+
+func (l *loggingVM) StoreCodeUnchecked(code cosmwasm.WasmCode) (cosmwasm.Checksum, error) {
+	if l.Fail {
+		return cosmwasm.Checksum{}, errTestFail
+	}
+	l.logs = append(l.logs, loggingVMLog{
+		MethodName: "StoreCodeUnchecked",
 		Message:    nil,
 	})
 	return cosmwasm.Checksum{}, nil
