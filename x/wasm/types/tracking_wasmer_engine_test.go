@@ -55,7 +55,7 @@ func (t *testGasProcessor) IngestGasRecord(ctx sdk.Context, records []ContractGa
 
 type testQuerier struct {
 	Ctx          sdk.Context
-	Vm           WasmerEngine
+	Vm           WasmEngine
 	GasUsed      []uint64
 	TotalGasUsed uint64
 }

@@ -1033,4 +1033,4 @@ func (t *TrackingWasmerEngine) GetMetrics() (*wasmvmtypes.Metrics, error) {
 	return t.vm.GetMetrics()
 }
 
-var _ WasmerEngine = &TrackingWasmerEngine{}
+var _ WasmEngine = &TrackingWasmerEngine{}
