@@ -563,7 +563,7 @@ func TestInstantiateGovSubMsgAuthzPropagated(t *testing.T) {
 	wasmtesting.MakeInstantiable(mockWasmVM)
 	var instanceLevel int
 	// mock wasvm to return new instantiate msgs with the response
-	mockWasmVM.InstantiateFn = func(codeID wasmvm.Checksum, env wasmvmtypes.Env, info wasmvmtypes.MessageInfo, initMsg []byte, store wasmvm.KVStore, goapi wasmvm.GoAPI, querier wasmvm.Querier, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.ContractResult, uint64, error) {
+	mockWasmVM.InstantiateFn = func(codeID wasmvm.Checksum, env wasmvmtypes.Env, info wasmvmtypes.MessageInfo, initMsg []byte, store types.PrefixStoreInfo, goapi wasmvm.GoAPI, querier types.QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.ContractResult, uint64, error) {
 		if instanceLevel == 2 {
 			return &wasmvmtypes.ContractResult{Ok: &wasmvmtypes.Response{}}, 0, nil
 		}
@@ -652,7 +652,7 @@ func TestMigrateGovSubMsgAuthzPropagated(t *testing.T) {
 
 	var instanceLevel int
 	// mock wasvm to return new migrate msgs with the response
-	mockWasmVM.MigrateFn = func(codeID wasmvm.Checksum, env wasmvmtypes.Env, migrateMsg []byte, store wasmvm.KVStore, goapi wasmvm.GoAPI, querier wasmvm.Querier, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.ContractResult, uint64, error) {
+	mockWasmVM.MigrateFn = func(codeID wasmvm.Checksum, env wasmvmtypes.Env, migrateMsg []byte, store types.PrefixStoreInfo, goapi wasmvm.GoAPI, querier types.QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.ContractResult, uint64, error) {
 		if instanceLevel == 1 {
 			return &wasmvmtypes.ContractResult{Ok: &wasmvmtypes.Response{}}, 0, nil
 		}
@@ -675,7 +675,7 @@ func TestMigrateGovSubMsgAuthzPropagated(t *testing.T) {
 			},
 		}, 0, nil
 	}
-	mockWasmVM.MigrateWithInfoFn = func(codeID wasmvm.Checksum, env wasmvmtypes.Env, migrateMsg []byte, migrateInfo wasmvmtypes.MigrateInfo, store wasmvm.KVStore, goapi wasmvm.GoAPI, querier wasmvm.Querier, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.ContractResult, uint64, error) {
+	mockWasmVM.MigrateWithInfoFn = func(codeID wasmvm.Checksum, env wasmvmtypes.Env, migrateMsg []byte, migrateInfo wasmvmtypes.MigrateInfo, store types.PrefixStoreInfo, goapi wasmvm.GoAPI, querier types.QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.ContractResult, uint64, error) {
 		return mockWasmVM.MigrateFn(codeID, env, migrateMsg, store, goapi, querier, gasMeter, gasLimit, deserCost)
 	}
 

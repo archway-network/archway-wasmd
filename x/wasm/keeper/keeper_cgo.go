@@ -69,7 +69,7 @@ func NewKeeper(
 	// NewVM does a lot, so better not to create it and silently drop it.
 	if keeper.wasmVM == nil {
 		var err error
-		keeper.wasmVM, err = wasmvm.NewVMWithConfig(wasmvmtypes.VMConfig{
+		wasmer, err := wasmvm.NewVMWithConfig(wasmvmtypes.VMConfig{
 			Cache: wasmvmtypes.CacheOptions{
 				BaseDir:                  filepath.Join(homeDir, "wasm"),
 				AvailableCapabilities:    availableCapabilities,
@@ -81,6 +81,7 @@ func NewKeeper(
 		if err != nil {
 			panic(err)
 		}
+		keeper.wasmVM = types.NewTrackingWasmerEngine(wasmer, &types.NoOpContractGasProcessor{})
 	}
 
 	for _, o := range postOpts {

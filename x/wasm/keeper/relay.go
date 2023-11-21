@@ -38,7 +38,7 @@ func (k Keeper) OnOpenChannel(
 	querier := k.newQueryHandler(ctx, contractAddr)
 
 	gasLeft := k.runtimeGasForContract(ctx)
-	res, gasUsed, execErr := k.wasmVM.IBCChannelOpen(codeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gasLeft, costJSONDeserialization)
+	res, gasUsed, execErr := k.wasmVM.IBCChannelOpen(ctx, codeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gasLeft, costJSONDeserialization)
 	k.consumeRuntimeGas(ctx, gasUsed)
 	if execErr != nil {
 		return "", errorsmod.Wrap(types.ErrExecuteFailed, execErr.Error())
@@ -71,7 +71,7 @@ func (k Keeper) OnConnectChannel(
 	querier := k.newQueryHandler(ctx, contractAddr)
 
 	gasLeft := k.runtimeGasForContract(ctx)
-	res, gasUsed, execErr := k.wasmVM.IBCChannelConnect(codeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gasLeft, costJSONDeserialization)
+	res, gasUsed, execErr := k.wasmVM.IBCChannelConnect(ctx, codeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gasLeft, costJSONDeserialization)
 	k.consumeRuntimeGas(ctx, gasUsed)
 	if execErr != nil {
 		return errorsmod.Wrap(types.ErrExecuteFailed, execErr.Error())
@@ -109,7 +109,7 @@ func (k Keeper) OnCloseChannel(
 	querier := k.newQueryHandler(ctx, contractAddr)
 
 	gasLeft := k.runtimeGasForContract(ctx)
-	res, gasUsed, execErr := k.wasmVM.IBCChannelClose(codeInfo.CodeHash, params, msg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gasLeft, costJSONDeserialization)
+	res, gasUsed, execErr := k.wasmVM.IBCChannelClose(ctx, codeInfo.CodeHash, params, msg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gasLeft, costJSONDeserialization)
 	k.consumeRuntimeGas(ctx, gasUsed)
 	if execErr != nil {
 		return errorsmod.Wrap(types.ErrExecuteFailed, execErr.Error())
@@ -146,7 +146,7 @@ func (k Keeper) OnRecvPacket(
 	querier := k.newQueryHandler(ctx, contractAddr)
 
 	gasLeft := k.runtimeGasForContract(ctx)
-	res, gasUsed, execErr := k.wasmVM.IBCPacketReceive(codeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gasLeft, costJSONDeserialization)
+	res, gasUsed, execErr := k.wasmVM.IBCPacketReceive(ctx, codeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gasLeft, costJSONDeserialization)
 	k.consumeRuntimeGas(ctx, gasUsed)
 	if execErr != nil {
 		panic(execErr) // let the contract fully abort an IBC packet receive.
@@ -219,7 +219,7 @@ func (k Keeper) OnAckPacket(
 	querier := k.newQueryHandler(ctx, contractAddr)
 
 	gasLeft := k.runtimeGasForContract(ctx)
-	res, gasUsed, execErr := k.wasmVM.IBCPacketAck(codeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gasLeft, costJSONDeserialization)
+	res, gasUsed, execErr := k.wasmVM.IBCPacketAck(ctx, codeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gasLeft, costJSONDeserialization)
 	k.consumeRuntimeGas(ctx, gasUsed)
 	if execErr != nil {
 		return errorsmod.Wrap(types.ErrExecuteFailed, execErr.Error())
@@ -254,7 +254,7 @@ func (k Keeper) OnTimeoutPacket(
 	querier := k.newQueryHandler(ctx, contractAddr)
 
 	gasLeft := k.runtimeGasForContract(ctx)
-	res, gasUsed, execErr := k.wasmVM.IBCPacketTimeout(codeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gasLeft, costJSONDeserialization)
+	res, gasUsed, execErr := k.wasmVM.IBCPacketTimeout(ctx, codeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gasLeft, costJSONDeserialization)
 	k.consumeRuntimeGas(ctx, gasUsed)
 	if execErr != nil {
 		return errorsmod.Wrap(types.ErrExecuteFailed, execErr.Error())
@@ -288,7 +288,7 @@ func (k Keeper) IBCSourceCallback(
 	querier := k.newQueryHandler(ctx, contractAddr)
 
 	gasLeft := k.runtimeGasForContract(ctx)
-	res, gasUsed, execErr := k.wasmVM.IBCSourceCallback(codeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gasLeft, costJSONDeserialization)
+	res, gasUsed, execErr := k.wasmVM.IBCSourceCallback(ctx, codeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gasLeft, costJSONDeserialization)
 	k.consumeRuntimeGas(ctx, gasUsed)
 	if execErr != nil {
 		return errorsmod.Wrap(types.ErrExecuteFailed, execErr.Error())
@@ -322,7 +322,7 @@ func (k Keeper) IBCDestinationCallback(
 	querier := k.newQueryHandler(ctx, contractAddr)
 
 	gasLeft := k.runtimeGasForContract(ctx)
-	res, gasUsed, execErr := k.wasmVM.IBCDestinationCallback(codeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gasLeft, costJSONDeserialization)
+	res, gasUsed, execErr := k.wasmVM.IBCDestinationCallback(ctx, codeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, ctx.GasMeter(), gasLeft, costJSONDeserialization)
 	k.consumeRuntimeGas(ctx, gasUsed)
 	if execErr != nil {
 		return errorsmod.Wrap(types.ErrExecuteFailed, execErr.Error())

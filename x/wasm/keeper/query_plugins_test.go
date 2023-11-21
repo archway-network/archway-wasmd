@@ -531,6 +531,18 @@ func TestCodeInfoWasmQuerier(t *testing.T) {
 }
 
 func TestQueryErrors(t *testing.T) {
+	ctx, _ := keeper.CreateTestInput(t, false, keeper.AvailableCapabilities)
+	initialGasMeter := types.NewContractGasMeter(30000000, func(_ uint64, info types.GasConsumptionInfo) types.GasConsumptionInfo {
+		return types.GasConsumptionInfo{
+			SDKGas: info.SDKGas * 2,
+		}
+	}, "foo", types.ContractOperationQuery)
+
+	// { Initialization
+	err := types.InitializeGasTracking(&ctx, &initialGasMeter)
+	require.NoError(t, err, "could not start contract gas tracking")
+	var e error = nil
+
 	specs := map[string]struct {
 		src    error
 		expErr error
@@ -538,19 +550,19 @@ func TestQueryErrors(t *testing.T) {
 		"no error": {},
 		"no such contract": {
 			src:    types.ErrNoSuchContractFn("contract-addr"),
-			expErr: wasmvmtypes.NoSuchContract{Addr: "contract-addr"},
+			expErr: fmt.Errorf("error while querying from wasm smart contract, querier error: %s, error: %s", wasmvmtypes.NoSuchContract{Addr: "contract-addr"}, e),
 		},
 		"no such contract - wrapped": {
 			src:    errorsmod.Wrap(types.ErrNoSuchContractFn("contract-addr"), "my additional data"),
-			expErr: wasmvmtypes.NoSuchContract{Addr: "contract-addr"},
+			expErr: fmt.Errorf("error while querying from wasm smart contract, querier error: %s, error: %s", wasmvmtypes.NoSuchContract{Addr: "contract-addr"}, e),
 		},
 		"no such code": {
 			src:    types.ErrNoSuchCodeFn(123),
-			expErr: wasmvmtypes.NoSuchCode{CodeID: 123},
+			expErr: fmt.Errorf("error while querying from wasm smart contract, querier error: %s, error: %s", wasmvmtypes.NoSuchCode{CodeID: 123}, e),
 		},
 		"no such code - wrapped": {
 			src:    errorsmod.Wrap(types.ErrNoSuchCodeFn(123), "my additional data"),
-			expErr: wasmvmtypes.NoSuchCode{CodeID: 123},
+			expErr: fmt.Errorf("error while querying from wasm smart contract, querier error: %s, error: %s", wasmvmtypes.NoSuchCode{CodeID: 123}, e),
 		},
 	}
 	for name, spec := range specs {
