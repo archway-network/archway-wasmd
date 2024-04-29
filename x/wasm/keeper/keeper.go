@@ -928,7 +928,7 @@ func (k Keeper) QueryRaw(ctx context.Context, contractAddress sdk.AccAddress, ke
 	return prefixStore.Get(key)
 }
 
-func (k Keeper) contractInstance(ctx sdk.Context, contractAddress sdk.AccAddress) (types.ContractInfo, types.CodeInfo, types.PrefixStoreInfo, error) {
+func (k Keeper) contractInstance(ctx context.Context, contractAddress sdk.AccAddress) (types.ContractInfo, types.CodeInfo, types.PrefixStoreInfo, error) {
 	store := k.storeService.OpenKVStore(ctx)
 
 	contractBz, err := store.Get(types.GetContractAddressKey(contractAddress))
