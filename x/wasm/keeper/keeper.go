@@ -793,12 +793,12 @@ func (k Keeper) QueryRaw(ctx context.Context, contractAddress sdk.AccAddress, ke
 	return prefixStore.Get(key)
 }
 
-func (k Keeper) contractInstance(ctx sdk.Context, contractAddress sdk.AccAddress) (types.ContractInfo, types.CodeInfo, types.PrefixStoreInfo, error) {
+func (k Keeper) contractInstance(ctx context.Context, contractAddress sdk.AccAddress) (types.ContractInfo, types.CodeInfo, types.PrefixStoreInfo, error) {
 	store := k.storeService.OpenKVStore(ctx)
 
 	contractBz, err := store.Get(types.GetContractAddressKey(contractAddress))
 	if err != nil {
-		return types.ContractInfo{}, types.CodeInfo{}, nil, err
+		return types.ContractInfo{}, types.CodeInfo{}, types.PrefixStoreInfo{}, err
 	}
 	if contractBz == nil {
 		return types.ContractInfo{}, types.CodeInfo{}, types.PrefixStoreInfo{}, types.ErrNoSuchContractFn(contractAddress.String()).
@@ -809,7 +809,7 @@ func (k Keeper) contractInstance(ctx sdk.Context, contractAddress sdk.AccAddress
 
 	codeInfoBz, err := store.Get(types.GetCodeKey(contractInfo.CodeID))
 	if err != nil {
-		return types.ContractInfo{}, types.CodeInfo{}, nil, err
+		return types.ContractInfo{}, types.CodeInfo{}, types.PrefixStoreInfo{}, err
 	}
 
 	if codeInfoBz == nil {
