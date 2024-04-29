@@ -3,8 +3,8 @@ package types
 import (
 	"fmt"
 
-	"cosmossdk.io/store/gaskv"
-	"cosmossdk.io/store/prefix"
+	gaskv "cosmossdk.io/store/gaskv"
+	prefix "cosmossdk.io/store/prefix"
 	stypes "cosmossdk.io/store/types"
 	wasmvm "github.com/CosmWasm/wasmvm/v2"
 	wasmvmtypes "github.com/CosmWasm/wasmvm/v2/types"
