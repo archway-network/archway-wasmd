@@ -337,8 +337,8 @@ func (k Keeper) instantiate(
 	// create prefixed data store
 	// 0x03 | BuildContractAddressClassic (sdk.AccAddress)
 	prefixStoreKey := types.GetContractStorePrefix(contractAddress)
-	vmStore := prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(sdkCtx)), prefixStoreKey)
-	prefixStore := types.PrefixStoreInfo{PrefixKey: prefixStoreKey, Store: vmStore}
+	//vmStore := types.NewStoreAdapter(prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(sdkCtx)), prefixStoreKey))
+	prefixStore := types.PrefixStoreInfo{PrefixKey: prefixStoreKey, Store: runtime.KVStoreAdapter(k.storeService.OpenKVStore(sdkCtx))}
 
 	// prepare querier
 	querier := k.newQueryHandler(sdkCtx, contractAddress)
@@ -954,8 +954,8 @@ func (k Keeper) contractInstance(ctx context.Context, contractAddress sdk.AccAdd
 	var codeInfo types.CodeInfo
 	k.cdc.MustUnmarshal(codeInfoBz, &codeInfo)
 	prefixStoreKey := types.GetContractStorePrefix(contractAddress)
-	vmStore := prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx)), prefixStoreKey)
-	prefixStore := types.PrefixStoreInfo{PrefixKey: prefixStoreKey, Store: vmStore}
+	//prefixStore := prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx)), prefixStoreKey)
+	prefixStore := types.PrefixStoreInfo{PrefixKey: prefixStoreKey, Store: runtime.KVStoreAdapter(store)}
 	return contractInfo, codeInfo, prefixStore, nil
 }
 
