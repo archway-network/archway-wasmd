@@ -311,7 +311,7 @@ func (k Keeper) instantiate(
 	// 0x03 | BuildContractAddressClassic (sdk.AccAddress)
 	prefixStoreKey := types.GetContractStorePrefix(contractAddress)
 	//vmStore := types.NewStoreAdapter(prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(sdkCtx)), prefixStoreKey))
-	prefixStore := types.PrefixStoreInfo{PrefixKey: prefixStoreKey, Store: ctx.MultiStore().GetKVStore(k.storeKey)}
+	prefixStore := types.PrefixStoreInfo{PrefixKey: prefixStoreKey, Store: runtime.KVStoreAdapter(k.storeService.OpenKVStore(sdkCtx))}
 
 	// prepare querier
 	querier := k.newQueryHandler(sdkCtx, contractAddress)
@@ -472,7 +472,7 @@ func (k Keeper) migrate(
 
 	prefixStoreKey := types.GetContractStorePrefix(contractAddress)
 	// vmStore := types.NewStoreAdapter(prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(sdkCtx)), prefixStoreKey))
-	prefixStore := types.PrefixStoreInfo{PrefixKey: prefixStoreKey, Store: ctx.MultiStore().GetKVStore(k.storeKey)}
+	prefixStore := types.PrefixStoreInfo{PrefixKey: prefixStoreKey, Store: runtime.KVStoreAdapter(k.storeService.OpenKVStore(sdkCtx))}
 	gas := k.runtimeGasForContract(sdkCtx)
 	res, gasUsed, err := k.wasmVM.Migrate(sdkCtx, newCodeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, &querier, k.gasMeter(sdkCtx), gas, costJSONDeserialization)
 	k.consumeRuntimeGas(sdkCtx, gasUsed)
@@ -820,7 +820,7 @@ func (k Keeper) contractInstance(ctx context.Context, contractAddress sdk.AccAdd
 	k.cdc.MustUnmarshal(codeInfoBz, &codeInfo)
 	prefixStoreKey := types.GetContractStorePrefix(contractAddress)
 	//prefixStore := prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx)), prefixStoreKey)
-	prefixStore := types.PrefixStoreInfo{PrefixKey: prefixStoreKey, Store: ctx.MultiStore().GetKVStore(k.storeKey)}
+	prefixStore := types.PrefixStoreInfo{PrefixKey: prefixStoreKey, Store: runtime.KVStoreAdapter(store)}
 	return contractInfo, codeInfo, prefixStore, nil
 }
 
