@@ -3,9 +3,11 @@ package types
 import (
 	"testing"
 
-	db "github.com/cometbft/cometbft-db"
+	"cosmossdk.io/log"
+	store "cosmossdk.io/store"
+	storemetrics "cosmossdk.io/store/metrics"
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
-	"github.com/cosmos/cosmos-sdk/store"
+	db "github.com/cosmos/cosmos-db"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
 )
@@ -17,7 +19,7 @@ func newContractGasMeterByRef(gasLimt uint64, gasCalculationFn func(_ uint64, in
 
 func TestGasTracking(t *testing.T) {
 	memDB := db.NewMemDB()
-	cms := store.NewCommitMultiStore(memDB)
+	cms := store.NewCommitMultiStore(memDB, log.NewTestLogger(t), storemetrics.NewNoOpMetrics())
 	ctx := sdk.NewContext(cms, tmproto.Header{}, false, nil)
 	mainMeter := ctx.GasMeter()
 

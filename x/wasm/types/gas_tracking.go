@@ -3,36 +3,37 @@ package types
 import (
 	"fmt"
 
+	storetypes "cosmossdk.io/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 const gasTrackingKey = "__gt_key__"
 
 type SessionRecord struct {
-	ActualSDKGas      sdk.Gas
-	OriginalSDKGas    sdk.Gas
-	ActualVMGas       sdk.Gas
-	OriginalVMGas     sdk.Gas
+	ActualSDKGas      storetypes.Gas
+	OriginalSDKGas    storetypes.Gas
+	ActualVMGas       storetypes.Gas
+	OriginalVMGas     storetypes.Gas
 	ContractAddress   string
 	ContractOperation uint64
 	description       string
 }
 
 type VMRecord struct {
-	OriginalVMGas sdk.Gas
-	ActualVMGas   sdk.Gas
+	OriginalVMGas storetypes.Gas
+	ActualVMGas   storetypes.Gas
 }
 
 type activeSession struct {
 	invokedGasMeter *ContractSDKGasMeter
 	invokerGasMeter *ContractSDKGasMeter
 	gasFilledIn     bool
-	originalVMGas   sdk.Gas
-	actualVMGas     sdk.Gas
+	originalVMGas   storetypes.Gas
+	actualVMGas     storetypes.Gas
 }
 
 type gasTracking struct {
-	mainGasMeter   sdk.GasMeter
+	mainGasMeter   storetypes.GasMeter
 	activeSessions []*activeSession
 	sessionRecords []*SessionRecord
 }

@@ -1,16 +1,15 @@
 package types
 
 import (
-	storetypes "github.com/cosmos/cosmos-sdk/store/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	storetypes "cosmossdk.io/store/types"
 )
 
-var _ sdk.GasMeter = &ContractSDKGasMeter{}
+var _ storetypes.GasMeter = &ContractSDKGasMeter{}
 
 type ContractSDKGasMeter struct {
-	actualGasConsumed          sdk.Gas
-	originalGas                sdk.Gas
-	underlyingGasMeter         sdk.GasMeter
+	actualGasConsumed          storetypes.Gas
+	originalGas                storetypes.Gas
+	underlyingGasMeter         storetypes.GasMeter
 	contractAddress            string
 	contractOperation          uint64
 	contractGasCalculationFunc func(operationId uint64, info GasConsumptionInfo) GasConsumptionInfo
@@ -21,7 +20,7 @@ func NewContractGasMeter(gasLimit uint64, gasCalculationFunc func(uint64, GasCon
 		actualGasConsumed:          0,
 		originalGas:                0,
 		contractGasCalculationFunc: gasCalculationFunc,
-		underlyingGasMeter:         sdk.NewGasMeter(gasLimit),
+		underlyingGasMeter:         storetypes.NewGasMeter(gasLimit),
 		contractAddress:            contractAddress,
 		contractOperation:          contractOperation,
 	}
@@ -35,11 +34,11 @@ func (c *ContractSDKGasMeter) GetContractOperation() uint64 {
 	return c.contractOperation
 }
 
-func (c *ContractSDKGasMeter) GetOriginalGas() sdk.Gas {
+func (c *ContractSDKGasMeter) GetOriginalGas() storetypes.Gas {
 	return c.originalGas
 }
 
-func (c *ContractSDKGasMeter) GetActualGas() sdk.Gas {
+func (c *ContractSDKGasMeter) GetActualGas() storetypes.Gas {
 	return c.actualGasConsumed
 }
 

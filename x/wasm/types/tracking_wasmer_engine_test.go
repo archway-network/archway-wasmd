@@ -5,12 +5,14 @@ import (
 	"math/rand"
 	"testing"
 
+	"cosmossdk.io/log"
+	store "cosmossdk.io/store"
+	storemetrics "cosmossdk.io/store/metrics"
+	storetypes "cosmossdk.io/store/types"
 	cosmwasm "github.com/CosmWasm/wasmvm"
 	wasmvmtypes "github.com/CosmWasm/wasmvm/types"
-	db "github.com/cometbft/cometbft-db"
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
-	"github.com/cosmos/cosmos-sdk/store"
-	stTypes "github.com/cosmos/cosmos-sdk/store/types"
+	db "github.com/cosmos/cosmos-db"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
 )
@@ -70,10 +72,10 @@ func (t *testQuerier) Query(request wasmvmtypes.QueryRequest, gasLimit uint64) (
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: request.Wasm.Raw.ContractAddr}},
 		[]byte{},
-		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB()).GetCommitKVStore(stTypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
+		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB(), log.NewNopLogger(), storemetrics.NewNoOpMetrics()).GetCommitKVStore(storetypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
 		cosmwasm.GoAPI{},
 		t,
-		sdk.NewInfiniteGasMeter(),
+		storetypes.NewInfiniteGasMeter(),
 		gasLimit,
 		wasmvmtypes.UFraction{},
 	)
@@ -379,8 +381,7 @@ func (l *loggingVM) Reset() {
 }
 
 func TestGasTrackingVMInstantiateAndQuery(t *testing.T) {
-	memDB := db.NewMemDB()
-	cms := store.NewCommitMultiStore(memDB)
+	cms := store.NewCommitMultiStore(db.NewMemDB(), log.NewTestLogger(t), storemetrics.NewNoOpMetrics())
 	emptyContext := sdk.NewContext(cms, tmproto.Header{}, false, nil)
 
 	loggingVM := loggingVM{
@@ -405,10 +406,10 @@ func TestGasTrackingVMInstantiateAndQuery(t *testing.T) {
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		wasmvmtypes.MessageInfo{},
 		[]byte{},
-		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB()).GetCommitKVStore(stTypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
+		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB(), log.NewTestLogger(t), storemetrics.NewNoOpMetrics()).GetCommitKVStore(storetypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
 		cosmwasm.GoAPI{},
 		&testQuerier,
-		sdk.NewInfiniteGasMeter(),
+		storetypes.NewInfiniteGasMeter(),
 		50,
 		wasmvmtypes.UFraction{},
 	)
@@ -442,10 +443,10 @@ func TestGasTrackingVMInstantiateAndQuery(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		[]byte{},
-		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB()).GetCommitKVStore(stTypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
+		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB(), log.NewTestLogger(t), storemetrics.NewNoOpMetrics()).GetCommitKVStore(storetypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
 		cosmwasm.GoAPI{},
 		&testQuerier,
-		sdk.NewInfiniteGasMeter(),
+		storetypes.NewInfiniteGasMeter(),
 		4,
 		wasmvmtypes.UFraction{},
 	)
@@ -477,10 +478,10 @@ func TestGasTrackingVMInstantiateAndQuery(t *testing.T) {
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		wasmvmtypes.MessageInfo{},
 		[]byte{},
-		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB()).GetCommitKVStore(stTypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
+		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB(), log.NewTestLogger(t), storemetrics.NewNoOpMetrics()).GetCommitKVStore(storetypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
 		cosmwasm.GoAPI{},
 		&testQuerier,
-		sdk.NewInfiniteGasMeter(),
+		storetypes.NewInfiniteGasMeter(),
 		50,
 		wasmvmtypes.UFraction{},
 	)
@@ -510,10 +511,10 @@ func TestGasTrackingVMInstantiateAndQuery(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		[]byte{},
-		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB()).GetCommitKVStore(stTypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
+		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB(), log.NewTestLogger(t), storemetrics.NewNoOpMetrics()).GetCommitKVStore(storetypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
 		cosmwasm.GoAPI{},
 		&testQuerier,
-		sdk.NewInfiniteGasMeter(),
+		storetypes.NewInfiniteGasMeter(),
 		0,
 		wasmvmtypes.UFraction{},
 	)
@@ -529,8 +530,7 @@ func TestGasTrackingVMInstantiateAndQuery(t *testing.T) {
 }
 
 func TestGasTrackingVMExecute(t *testing.T) {
-	memDB := db.NewMemDB()
-	cms := store.NewCommitMultiStore(memDB)
+	cms := store.NewCommitMultiStore(db.NewMemDB(), log.NewTestLogger(t), storemetrics.NewNoOpMetrics())
 	emptyContext := sdk.NewContext(cms, tmproto.Header{}, false, nil)
 
 	loggingVM := loggingVM{
@@ -555,10 +555,10 @@ func TestGasTrackingVMExecute(t *testing.T) {
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		wasmvmtypes.MessageInfo{},
 		[]byte{},
-		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB()).GetCommitKVStore(stTypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
+		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB(), log.NewTestLogger(t), storemetrics.NewNoOpMetrics()).GetCommitKVStore(storetypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
 		cosmwasm.GoAPI{},
 		&testQuerier,
-		sdk.NewInfiniteGasMeter(),
+		storetypes.NewInfiniteGasMeter(),
 		50,
 		wasmvmtypes.UFraction{},
 	)
@@ -595,10 +595,10 @@ func TestGasTrackingVMExecute(t *testing.T) {
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		wasmvmtypes.MessageInfo{},
 		[]byte{},
-		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB()).GetCommitKVStore(stTypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
+		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB(), log.NewTestLogger(t), storemetrics.NewNoOpMetrics()).GetCommitKVStore(storetypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
 		cosmwasm.GoAPI{},
 		&testQuerier,
-		sdk.NewInfiniteGasMeter(),
+		storetypes.NewInfiniteGasMeter(),
 		50,
 		wasmvmtypes.UFraction{},
 	)
@@ -620,8 +620,7 @@ func TestGasTrackingVMExecute(t *testing.T) {
 }
 
 func TestGasTrackingVMMigrate(t *testing.T) {
-	memDB := db.NewMemDB()
-	cms := store.NewCommitMultiStore(memDB)
+	cms := store.NewCommitMultiStore(db.NewMemDB(), log.NewTestLogger(t), storemetrics.NewNoOpMetrics())
 	emptyContext := sdk.NewContext(cms, tmproto.Header{}, false, nil)
 
 	loggingVM := loggingVM{
@@ -645,10 +644,10 @@ func TestGasTrackingVMMigrate(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		[]byte{},
-		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB()).GetCommitKVStore(stTypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
+		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB(), log.NewTestLogger(t), storemetrics.NewNoOpMetrics()).GetCommitKVStore(storetypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
 		cosmwasm.GoAPI{},
 		&testQuerier,
-		sdk.NewInfiniteGasMeter(),
+		storetypes.NewInfiniteGasMeter(),
 		50,
 		wasmvmtypes.UFraction{},
 	)
@@ -684,10 +683,10 @@ func TestGasTrackingVMMigrate(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		[]byte{},
-		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB()).GetCommitKVStore(stTypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
+		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB(), log.NewTestLogger(t), storemetrics.NewNoOpMetrics()).GetCommitKVStore(storetypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
 		cosmwasm.GoAPI{},
 		&testQuerier,
-		sdk.NewInfiniteGasMeter(),
+		storetypes.NewInfiniteGasMeter(),
 		50,
 		wasmvmtypes.UFraction{},
 	)
@@ -709,8 +708,7 @@ func TestGasTrackingVMMigrate(t *testing.T) {
 }
 
 func TestGasTrackingVMSudo(t *testing.T) {
-	memDB := db.NewMemDB()
-	cms := store.NewCommitMultiStore(memDB)
+	cms := store.NewCommitMultiStore(db.NewMemDB(), log.NewTestLogger(t), storemetrics.NewNoOpMetrics())
 	emptyContext := sdk.NewContext(cms, tmproto.Header{}, false, nil)
 
 	loggingVM := loggingVM{
@@ -734,10 +732,10 @@ func TestGasTrackingVMSudo(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		[]byte{},
-		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB()).GetCommitKVStore(stTypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
+		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB(), log.NewTestLogger(t), storemetrics.NewNoOpMetrics()).GetCommitKVStore(storetypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
 		cosmwasm.GoAPI{},
 		&testQuerier,
-		sdk.NewInfiniteGasMeter(),
+		storetypes.NewInfiniteGasMeter(),
 		50,
 		wasmvmtypes.UFraction{},
 	)
@@ -775,10 +773,10 @@ func TestGasTrackingVMSudo(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		[]byte{},
-		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB()).GetCommitKVStore(stTypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
+		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB(), log.NewTestLogger(t), storemetrics.NewNoOpMetrics()).GetCommitKVStore(storetypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
 		cosmwasm.GoAPI{},
 		&testQuerier,
-		sdk.NewInfiniteGasMeter(),
+		storetypes.NewInfiniteGasMeter(),
 		50,
 		wasmvmtypes.UFraction{},
 	)
@@ -800,8 +798,7 @@ func TestGasTrackingVMSudo(t *testing.T) {
 }
 
 func TestGasTrackingVMReply(t *testing.T) {
-	memDB := db.NewMemDB()
-	cms := store.NewCommitMultiStore(memDB)
+	cms := store.NewCommitMultiStore(db.NewMemDB(), log.NewTestLogger(t), storemetrics.NewNoOpMetrics())
 	emptyContext := sdk.NewContext(cms, tmproto.Header{}, false, nil)
 
 	loggingVM := loggingVM{
@@ -825,10 +822,10 @@ func TestGasTrackingVMReply(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		wasmvmtypes.Reply{},
-		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB()).GetCommitKVStore(stTypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
+		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB(), log.NewTestLogger(t), storemetrics.NewNoOpMetrics()).GetCommitKVStore(storetypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
 		cosmwasm.GoAPI{},
 		&testQuerier,
-		sdk.NewInfiniteGasMeter(),
+		storetypes.NewInfiniteGasMeter(),
 		50,
 		wasmvmtypes.UFraction{},
 	)
@@ -864,10 +861,10 @@ func TestGasTrackingVMReply(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		wasmvmtypes.Reply{},
-		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB()).GetCommitKVStore(stTypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
+		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB(), log.NewTestLogger(t), storemetrics.NewNoOpMetrics()).GetCommitKVStore(storetypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
 		cosmwasm.GoAPI{},
 		&testQuerier,
-		sdk.NewInfiniteGasMeter(),
+		storetypes.NewInfiniteGasMeter(),
 		50,
 		wasmvmtypes.UFraction{},
 	)
@@ -889,8 +886,7 @@ func TestGasTrackingVMReply(t *testing.T) {
 }
 
 func TestGasTrackingVMIBCChannelOpen(t *testing.T) {
-	memDB := db.NewMemDB()
-	cms := store.NewCommitMultiStore(memDB)
+	cms := store.NewCommitMultiStore(db.NewMemDB(), log.NewTestLogger(t), storemetrics.NewNoOpMetrics())
 	emptyContext := sdk.NewContext(cms, tmproto.Header{}, false, nil)
 
 	loggingVM := loggingVM{
@@ -914,10 +910,10 @@ func TestGasTrackingVMIBCChannelOpen(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		wasmvmtypes.IBCChannelOpenMsg{},
-		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB()).GetCommitKVStore(stTypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
+		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB(), log.NewTestLogger(t), storemetrics.NewNoOpMetrics()).GetCommitKVStore(storetypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
 		cosmwasm.GoAPI{},
 		&testQuerier,
-		sdk.NewInfiniteGasMeter(),
+		storetypes.NewInfiniteGasMeter(),
 		50,
 		wasmvmtypes.UFraction{},
 	)
@@ -953,10 +949,10 @@ func TestGasTrackingVMIBCChannelOpen(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		wasmvmtypes.IBCChannelOpenMsg{},
-		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB()).GetCommitKVStore(stTypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
+		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB(), log.NewTestLogger(t), storemetrics.NewNoOpMetrics()).GetCommitKVStore(storetypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
 		cosmwasm.GoAPI{},
 		&testQuerier,
-		sdk.NewInfiniteGasMeter(),
+		storetypes.NewInfiniteGasMeter(),
 		50,
 		wasmvmtypes.UFraction{},
 	)
@@ -978,8 +974,7 @@ func TestGasTrackingVMIBCChannelOpen(t *testing.T) {
 }
 
 func TestGasTrackingVMIBCChannelConnect(t *testing.T) {
-	memDB := db.NewMemDB()
-	cms := store.NewCommitMultiStore(memDB)
+	cms := store.NewCommitMultiStore(db.NewMemDB(), log.NewTestLogger(t), storemetrics.NewNoOpMetrics())
 	emptyContext := sdk.NewContext(cms, tmproto.Header{}, false, nil)
 
 	loggingVM := loggingVM{
@@ -1003,10 +998,10 @@ func TestGasTrackingVMIBCChannelConnect(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		wasmvmtypes.IBCChannelConnectMsg{},
-		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB()).GetCommitKVStore(stTypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
+		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB(), log.NewTestLogger(t), storemetrics.NewNoOpMetrics()).GetCommitKVStore(storetypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
 		cosmwasm.GoAPI{},
 		&testQuerier,
-		sdk.NewInfiniteGasMeter(),
+		storetypes.NewInfiniteGasMeter(),
 		50,
 		wasmvmtypes.UFraction{},
 	)
@@ -1042,10 +1037,10 @@ func TestGasTrackingVMIBCChannelConnect(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		wasmvmtypes.IBCChannelConnectMsg{},
-		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB()).GetCommitKVStore(stTypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
+		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB(), log.NewTestLogger(t), storemetrics.NewNoOpMetrics()).GetCommitKVStore(storetypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
 		cosmwasm.GoAPI{},
 		&testQuerier,
-		sdk.NewInfiniteGasMeter(),
+		storetypes.NewInfiniteGasMeter(),
 		50,
 		wasmvmtypes.UFraction{},
 	)
@@ -1067,8 +1062,7 @@ func TestGasTrackingVMIBCChannelConnect(t *testing.T) {
 }
 
 func TestGasTrackingVMIBCChannelClose(t *testing.T) {
-	memDB := db.NewMemDB()
-	cms := store.NewCommitMultiStore(memDB)
+	cms := store.NewCommitMultiStore(db.NewMemDB(), log.NewTestLogger(t), storemetrics.NewNoOpMetrics())
 	emptyContext := sdk.NewContext(cms, tmproto.Header{}, false, nil)
 
 	loggingVM := loggingVM{
@@ -1092,10 +1086,10 @@ func TestGasTrackingVMIBCChannelClose(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		wasmvmtypes.IBCChannelCloseMsg{},
-		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB()).GetCommitKVStore(stTypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
+		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB(), log.NewTestLogger(t), storemetrics.NewNoOpMetrics()).GetCommitKVStore(storetypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
 		cosmwasm.GoAPI{},
 		&testQuerier,
-		sdk.NewInfiniteGasMeter(),
+		storetypes.NewInfiniteGasMeter(),
 		50,
 		wasmvmtypes.UFraction{},
 	)
@@ -1131,10 +1125,10 @@ func TestGasTrackingVMIBCChannelClose(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		wasmvmtypes.IBCChannelCloseMsg{},
-		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB()).GetCommitKVStore(stTypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
+		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB(), log.NewTestLogger(t), storemetrics.NewNoOpMetrics()).GetCommitKVStore(storetypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
 		cosmwasm.GoAPI{},
 		&testQuerier,
-		sdk.NewInfiniteGasMeter(),
+		storetypes.NewInfiniteGasMeter(),
 		50,
 		wasmvmtypes.UFraction{},
 	)
@@ -1156,8 +1150,7 @@ func TestGasTrackingVMIBCChannelClose(t *testing.T) {
 }
 
 func TestGasTrackingVMIBCPacketReceive(t *testing.T) {
-	memDB := db.NewMemDB()
-	cms := store.NewCommitMultiStore(memDB)
+	cms := store.NewCommitMultiStore(db.NewMemDB(), log.NewTestLogger(t), storemetrics.NewNoOpMetrics())
 	emptyContext := sdk.NewContext(cms, tmproto.Header{}, false, nil)
 
 	loggingVM := loggingVM{
@@ -1181,10 +1174,10 @@ func TestGasTrackingVMIBCPacketReceive(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		wasmvmtypes.IBCPacketReceiveMsg{},
-		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB()).GetCommitKVStore(stTypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
+		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB(), log.NewTestLogger(t), storemetrics.NewNoOpMetrics()).GetCommitKVStore(storetypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
 		cosmwasm.GoAPI{},
 		&testQuerier,
-		sdk.NewInfiniteGasMeter(),
+		storetypes.NewInfiniteGasMeter(),
 		50,
 		wasmvmtypes.UFraction{},
 	)
@@ -1220,10 +1213,10 @@ func TestGasTrackingVMIBCPacketReceive(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		wasmvmtypes.IBCPacketReceiveMsg{},
-		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB()).GetCommitKVStore(stTypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
+		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB(), log.NewTestLogger(t), storemetrics.NewNoOpMetrics()).GetCommitKVStore(storetypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
 		cosmwasm.GoAPI{},
 		&testQuerier,
-		sdk.NewInfiniteGasMeter(),
+		storetypes.NewInfiniteGasMeter(),
 		50,
 		wasmvmtypes.UFraction{},
 	)
@@ -1245,8 +1238,7 @@ func TestGasTrackingVMIBCPacketReceive(t *testing.T) {
 }
 
 func TestGasTrackingVMIBCPacketAck(t *testing.T) {
-	memDB := db.NewMemDB()
-	cms := store.NewCommitMultiStore(memDB)
+	cms := store.NewCommitMultiStore(db.NewMemDB(), log.NewTestLogger(t), storemetrics.NewNoOpMetrics())
 	emptyContext := sdk.NewContext(cms, tmproto.Header{}, false, nil)
 
 	loggingVM := loggingVM{
@@ -1270,10 +1262,10 @@ func TestGasTrackingVMIBCPacketAck(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		wasmvmtypes.IBCPacketAckMsg{},
-		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB()).GetCommitKVStore(stTypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
+		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB(), log.NewTestLogger(t), storemetrics.NewNoOpMetrics()).GetCommitKVStore(storetypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
 		cosmwasm.GoAPI{},
 		&testQuerier,
-		sdk.NewInfiniteGasMeter(),
+		storetypes.NewInfiniteGasMeter(),
 		50,
 		wasmvmtypes.UFraction{},
 	)
@@ -1309,10 +1301,10 @@ func TestGasTrackingVMIBCPacketAck(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		wasmvmtypes.IBCPacketAckMsg{},
-		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB()).GetCommitKVStore(stTypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
+		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB(), log.NewTestLogger(t), storemetrics.NewNoOpMetrics()).GetCommitKVStore(storetypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
 		cosmwasm.GoAPI{},
 		&testQuerier,
-		sdk.NewInfiniteGasMeter(),
+		storetypes.NewInfiniteGasMeter(),
 		50,
 		wasmvmtypes.UFraction{},
 	)
@@ -1334,8 +1326,7 @@ func TestGasTrackingVMIBCPacketAck(t *testing.T) {
 }
 
 func TestGasTrackingVMIBCPacketTimeout(t *testing.T) {
-	memDB := db.NewMemDB()
-	cms := store.NewCommitMultiStore(memDB)
+	cms := store.NewCommitMultiStore(db.NewMemDB(), log.NewTestLogger(t), storemetrics.NewNoOpMetrics())
 	emptyContext := sdk.NewContext(cms, tmproto.Header{}, false, nil)
 
 	loggingVM := loggingVM{
@@ -1359,10 +1350,10 @@ func TestGasTrackingVMIBCPacketTimeout(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		wasmvmtypes.IBCPacketTimeoutMsg{},
-		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB()).GetCommitKVStore(stTypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
+		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB(), log.NewTestLogger(t), storemetrics.NewNoOpMetrics()).GetCommitKVStore(storetypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
 		cosmwasm.GoAPI{},
 		&testQuerier,
-		sdk.NewInfiniteGasMeter(),
+		storetypes.NewInfiniteGasMeter(),
 		50,
 		wasmvmtypes.UFraction{},
 	)
@@ -1398,10 +1389,10 @@ func TestGasTrackingVMIBCPacketTimeout(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		wasmvmtypes.IBCPacketTimeoutMsg{},
-		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB()).GetCommitKVStore(stTypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
+		PrefixStoreInfo{Store: store.NewCommitMultiStore(db.NewMemDB(), log.NewTestLogger(t), storemetrics.NewNoOpMetrics()).GetCommitKVStore(storetypes.NewKVStoreKey("test")), PrefixKey: []byte{0x1}},
 		cosmwasm.GoAPI{},
 		&testQuerier,
-		sdk.NewInfiniteGasMeter(),
+		storetypes.NewInfiniteGasMeter(),
 		50,
 		wasmvmtypes.UFraction{},
 	)
