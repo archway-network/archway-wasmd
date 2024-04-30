@@ -66,11 +66,11 @@ func NewKeeper(
 	// only set the wasmvm if no one set this in the options
 	// NewVM does a lot, so better not to create it and silently drop it.
 	if keeper.wasmVM == nil {
-		var err error
-		keeper.wasmVM, err = wasmvm.NewVM(filepath.Join(homeDir, "wasm"), availableCapabilities, contractMemoryLimit, wasmConfig.ContractDebugMode, wasmConfig.MemoryCacheSize)
+		wasmer, err := wasmvm.NewVM(filepath.Join(homeDir, "wasm"), availableCapabilities, contractMemoryLimit, wasmConfig.ContractDebugMode, wasmConfig.MemoryCacheSize)
 		if err != nil {
 			panic(err)
 		}
+		keeper.wasmVM = types.NewTrackingWasmerEngine(wasmer, &types.NoOpContractGasProcessor{})
 	}
 
 	for _, o := range postOpts {
