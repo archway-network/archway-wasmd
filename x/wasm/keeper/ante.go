@@ -27,9 +27,6 @@ func NewCountTXDecorator(s corestoretypes.KVStoreService) *CountTXDecorator {
 // The ante handler passes the counter value via sdk.Context upstream. See `types.TXCounter(ctx)` to read the value.
 // Simulations don't get a tx counter value assigned.
 func (a CountTXDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, next sdk.AnteHandler) (sdk.Context, error) {
-	if simulate {
-		return next(ctx, tx, simulate)
-	}
 	store := a.storeService.OpenKVStore(ctx)
 	currentHeight := ctx.BlockHeight()
 
@@ -46,6 +43,14 @@ func (a CountTXDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, 
 			txCounter = val
 		} // else use `0` from above to start with
 	}
+
+	// If it is simulation we store zero as current index which is a sentinel value
+	// Otherwise we store actual tx counter
+	if simulate {
+		store.Set(types.TXCounterPrefix, encodeHeightCounter(currentHeight, 0))
+		return next(ctx, tx, simulate)
+	}
+
 	// store next counter value for current height
 	err = store.Set(types.TXCounterPrefix, encodeHeightCounter(currentHeight, txCounter+1))
 	if err != nil {
