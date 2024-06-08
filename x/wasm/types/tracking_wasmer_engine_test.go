@@ -57,7 +57,7 @@ func (t *testGasProcessor) IngestGasRecord(ctx sdk.Context, records []ContractGa
 
 type testQuerier struct {
 	Ctx          sdk.Context
-	Vm           WasmerEngine
+	Vm           WasmEngine
 	GasUsed      []uint64
 	TotalGasUsed uint64
 }
@@ -72,7 +72,7 @@ func (t *testQuerier) Query(request wasmvmtypes.QueryRequest, gasLimit uint64) (
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: request.Wasm.Raw.ContractAddr}},
 		[]byte{},
-		NewStoreAdapter(
+		NewPrefixStore(
 			store.NewCommitMultiStore(
 				db.NewMemDB(),
 				log.NewNopLogger(),
@@ -131,6 +131,30 @@ func (l *loggingVM) AnalyzeCode(checksum cosmwasm.Checksum) (*wasmvmtypes.Analys
 		Message:    nil,
 	})
 	return nil, nil
+}
+
+// StoreCode implements BareWasmVM.
+func (l *loggingVM) StoreCode(code cosmwasm.WasmCode) (wasmvmtypes.Checksum, error) {
+	if l.Fail {
+		return cosmwasm.Checksum{}, errTestFail
+	}
+	l.logs = append(l.logs, loggingVMLog{
+		MethodName: "StoreCode",
+		Message:    nil,
+	})
+	return cosmwasm.Checksum{}, nil
+}
+
+// StoreCodeUnchecked implements BareWasmVM.
+func (l *loggingVM) StoreCodeUnchecked(code cosmwasm.WasmCode) (wasmvmtypes.Checksum, error) {
+	if l.Fail {
+		return cosmwasm.Checksum{}, errTestFail
+	}
+	l.logs = append(l.logs, loggingVMLog{
+		MethodName: "StoreCodeUnchecked",
+		Message:    nil,
+	})
+	return cosmwasm.Checksum{}, nil
 }
 
 func (l *loggingVM) Instantiate(checksum cosmwasm.Checksum, env wasmvmtypes.Env, info wasmvmtypes.MessageInfo, initMsg []byte, store cosmwasm.KVStore, goapi cosmwasm.GoAPI, querier cosmwasm.Querier, gasMeter cosmwasm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.Response, uint64, error) {
@@ -399,7 +423,7 @@ func TestGasTrackingVMInstantiateAndQuery(t *testing.T) {
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		wasmvmtypes.MessageInfo{},
 		[]byte{},
-		NewStoreAdapter(
+		NewPrefixStore(
 			store.NewCommitMultiStore(
 				db.NewMemDB(),
 				log.NewNopLogger(),
@@ -443,7 +467,7 @@ func TestGasTrackingVMInstantiateAndQuery(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		[]byte{},
-		NewStoreAdapter(
+		NewPrefixStore(
 			store.NewCommitMultiStore(
 				db.NewMemDB(),
 				log.NewNopLogger(),
@@ -485,7 +509,7 @@ func TestGasTrackingVMInstantiateAndQuery(t *testing.T) {
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		wasmvmtypes.MessageInfo{},
 		[]byte{},
-		NewStoreAdapter(
+		NewPrefixStore(
 			store.NewCommitMultiStore(
 				db.NewMemDB(),
 				log.NewNopLogger(),
@@ -525,7 +549,7 @@ func TestGasTrackingVMInstantiateAndQuery(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		[]byte{},
-		NewStoreAdapter(
+		NewPrefixStore(
 			store.NewCommitMultiStore(
 				db.NewMemDB(),
 				log.NewNopLogger(),
@@ -577,7 +601,7 @@ func TestGasTrackingVMExecute(t *testing.T) {
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		wasmvmtypes.MessageInfo{},
 		[]byte{},
-		NewStoreAdapter(
+		NewPrefixStore(
 			store.NewCommitMultiStore(
 				db.NewMemDB(),
 				log.NewNopLogger(),
@@ -624,7 +648,7 @@ func TestGasTrackingVMExecute(t *testing.T) {
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		wasmvmtypes.MessageInfo{},
 		[]byte{},
-		NewStoreAdapter(
+		NewPrefixStore(
 			store.NewCommitMultiStore(
 				db.NewMemDB(),
 				log.NewNopLogger(),
@@ -681,7 +705,7 @@ func TestGasTrackingVMMigrate(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		[]byte{},
-		NewStoreAdapter(
+		NewPrefixStore(
 			store.NewCommitMultiStore(
 				db.NewMemDB(),
 				log.NewNopLogger(),
@@ -727,7 +751,7 @@ func TestGasTrackingVMMigrate(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		[]byte{},
-		NewStoreAdapter(
+		NewPrefixStore(
 			store.NewCommitMultiStore(
 				db.NewMemDB(),
 				log.NewNopLogger(),
@@ -784,7 +808,7 @@ func TestGasTrackingVMSudo(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		[]byte{},
-		NewStoreAdapter(
+		NewPrefixStore(
 			store.NewCommitMultiStore(
 				db.NewMemDB(),
 				log.NewNopLogger(),
@@ -832,7 +856,7 @@ func TestGasTrackingVMSudo(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		[]byte{},
-		NewStoreAdapter(
+		NewPrefixStore(
 			store.NewCommitMultiStore(
 				db.NewMemDB(),
 				log.NewNopLogger(),
@@ -889,7 +913,7 @@ func TestGasTrackingVMReply(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		wasmvmtypes.Reply{},
-		NewStoreAdapter(
+		NewPrefixStore(
 			store.NewCommitMultiStore(
 				db.NewMemDB(),
 				log.NewNopLogger(),
@@ -935,7 +959,7 @@ func TestGasTrackingVMReply(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		wasmvmtypes.Reply{},
-		NewStoreAdapter(
+		NewPrefixStore(
 			store.NewCommitMultiStore(
 				db.NewMemDB(),
 				log.NewNopLogger(),
@@ -992,7 +1016,7 @@ func TestGasTrackingVMIBCChannelOpen(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		wasmvmtypes.IBCChannelOpenMsg{},
-		NewStoreAdapter(
+		NewPrefixStore(
 			store.NewCommitMultiStore(
 				db.NewMemDB(),
 				log.NewNopLogger(),
@@ -1038,7 +1062,7 @@ func TestGasTrackingVMIBCChannelOpen(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		wasmvmtypes.IBCChannelOpenMsg{},
-		NewStoreAdapter(
+		NewPrefixStore(
 			store.NewCommitMultiStore(
 				db.NewMemDB(),
 				log.NewNopLogger(),
@@ -1095,7 +1119,7 @@ func TestGasTrackingVMIBCChannelConnect(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		wasmvmtypes.IBCChannelConnectMsg{},
-		NewStoreAdapter(
+		NewPrefixStore(
 			store.NewCommitMultiStore(
 				db.NewMemDB(),
 				log.NewNopLogger(),
@@ -1141,7 +1165,7 @@ func TestGasTrackingVMIBCChannelConnect(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		wasmvmtypes.IBCChannelConnectMsg{},
-		NewStoreAdapter(
+		NewPrefixStore(
 			store.NewCommitMultiStore(
 				db.NewMemDB(),
 				log.NewNopLogger(),
@@ -1198,7 +1222,7 @@ func TestGasTrackingVMIBCChannelClose(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		wasmvmtypes.IBCChannelCloseMsg{},
-		NewStoreAdapter(
+		NewPrefixStore(
 			store.NewCommitMultiStore(
 				db.NewMemDB(),
 				log.NewNopLogger(),
@@ -1244,7 +1268,7 @@ func TestGasTrackingVMIBCChannelClose(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		wasmvmtypes.IBCChannelCloseMsg{},
-		NewStoreAdapter(
+		NewPrefixStore(
 			store.NewCommitMultiStore(
 				db.NewMemDB(),
 				log.NewNopLogger(),
@@ -1301,7 +1325,7 @@ func TestGasTrackingVMIBCPacketReceive(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		wasmvmtypes.IBCPacketReceiveMsg{},
-		NewStoreAdapter(
+		NewPrefixStore(
 			store.NewCommitMultiStore(
 				db.NewMemDB(),
 				log.NewNopLogger(),
@@ -1347,7 +1371,7 @@ func TestGasTrackingVMIBCPacketReceive(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		wasmvmtypes.IBCPacketReceiveMsg{},
-		NewStoreAdapter(
+		NewPrefixStore(
 			store.NewCommitMultiStore(
 				db.NewMemDB(),
 				log.NewNopLogger(),
@@ -1404,7 +1428,7 @@ func TestGasTrackingVMIBCPacketAck(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		wasmvmtypes.IBCPacketAckMsg{},
-		NewStoreAdapter(
+		NewPrefixStore(
 			store.NewCommitMultiStore(
 				db.NewMemDB(),
 				log.NewNopLogger(),
@@ -1450,7 +1474,7 @@ func TestGasTrackingVMIBCPacketAck(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		wasmvmtypes.IBCPacketAckMsg{},
-		NewStoreAdapter(
+		NewPrefixStore(
 			store.NewCommitMultiStore(
 				db.NewMemDB(),
 				log.NewNopLogger(),
@@ -1507,7 +1531,7 @@ func TestGasTrackingVMIBCPacketTimeout(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		wasmvmtypes.IBCPacketTimeoutMsg{},
-		NewStoreAdapter(
+		NewPrefixStore(
 			store.NewCommitMultiStore(
 				db.NewMemDB(),
 				log.NewNopLogger(),
@@ -1553,7 +1577,7 @@ func TestGasTrackingVMIBCPacketTimeout(t *testing.T) {
 		cosmwasm.Checksum{},
 		wasmvmtypes.Env{Contract: wasmvmtypes.ContractInfo{Address: "1"}},
 		wasmvmtypes.IBCPacketTimeoutMsg{},
-		NewStoreAdapter(
+		NewPrefixStore(
 			store.NewCommitMultiStore(
 				db.NewMemDB(),
 				log.NewNopLogger(),

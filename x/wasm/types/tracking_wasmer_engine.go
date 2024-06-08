@@ -26,6 +26,19 @@ type BareWasmVM interface {
 	// Currently just reports if it exposes all IBC entry points.
 	AnalyzeCode(checksum wasmvm.Checksum) (*wasmvmtypes.AnalysisReport, error)
 
+	// Create will compile the wasm code, and store the resulting pre-compile
+	// as well as the original code. Both can be referenced later via checksum
+	// This must be done one time for given code, after which it can be
+	// instatitated many times, and each instance called many times.
+	// It does the same as StoreCodeUnchecked plus the static checks.
+	StoreCode(code wasmvm.WasmCode) (wasmvm.Checksum, error)
+
+	// Create will compile the wasm code, and store the resulting pre-compile
+	// as well as the original code. Both can be referenced later via checksum
+	// This must be done one time for given code, after which it can be
+	// instatitated many times, and each instance called many times.
+	// It does the same as StoreCode but without the static checks.
+	StoreCodeUnchecked(code wasmvm.WasmCode) (wasmvm.Checksum, error)
 	// Instantiate will create a new contract based on the given codeID.
 	// We can set the initMsg (contract "genesis") here, and it then receives
 	// an account and address and can be invoked (Execute) many times.
@@ -322,7 +335,17 @@ func (t *TrackingWasmerEngine) AnalyzeCode(checksum wasmvm.Checksum) (*wasmvmtyp
 	return t.vm.AnalyzeCode(checksum)
 }
 
-func (t *TrackingWasmerEngine) Query(ctx sdk.Context, code wasmvm.Checksum, env wasmvmtypes.Env, queryMsg []byte, store wasmvm.KVStore, goapi wasmvm.GoAPI, querier QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) ([]byte, uint64, error) {
+// StoreCode implements WasmEngine.
+func (t *TrackingWasmerEngine) StoreCode(code wasmvm.WasmCode) (wasmvmtypes.Checksum, error) {
+	return t.vm.StoreCode(code)
+}
+
+// StoreCodeUnchecked implements WasmEngine.
+func (t *TrackingWasmerEngine) StoreCodeUnchecked(code wasmvm.WasmCode) (wasmvmtypes.Checksum, error) {
+	return t.vm.StoreCodeUnchecked(code)
+}
+
+func (t *TrackingWasmerEngine) Query(ctx sdk.Context, code wasmvm.Checksum, env wasmvmtypes.Env, queryMsg []byte, store PrefixStoreInfo, goapi wasmvm.GoAPI, querier QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) ([]byte, uint64, error) {
 	const CurrentOperation = ContractOperationQuery
 	var contractAddress = env.Contract.Address
 
@@ -345,9 +368,9 @@ func (t *TrackingWasmerEngine) Query(ctx sdk.Context, code wasmvm.Checksum, env 
 		}
 	}
 
-	prefixStore := prefix.NewStore(gaskv.NewStore(store.Pa, &contractMeter, storetypes.KVGasConfig()), store.PrefixKey)
+	prefixStore := prefix.NewStore(gaskv.NewStore(store.Store, &contractMeter, storetypes.KVGasConfig()), store.PrefixKey)
 
-	response, vmGasUsed, err := t.vm.Query(code, env, queryMsg, prefixStore, goapi, querier, gasMeter, gasLimit, deserCost)
+	response, vmGasUsed, err := t.vm.Query(code, env, queryMsg, NewStoreAdapter(prefixStore), goapi, querier, gasMeter, gasLimit, deserCost)
 
 	updatedGasInfo, trackingErr := t.getActualGas(ctx, CurrentOperation, contractAddress, GasConsumptionInfo{
 		SDKGas: 0,
@@ -371,7 +394,7 @@ func (t *TrackingWasmerEngine) Query(ctx sdk.Context, code wasmvm.Checksum, env 
 	}
 }
 
-func (t *TrackingWasmerEngine) Instantiate(ctx sdk.Context, checksum wasmvm.Checksum, env wasmvmtypes.Env, info wasmvmtypes.MessageInfo, initMsg []byte, store wasmvm.KVStore, goapi wasmvm.GoAPI, querier QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.Response, uint64, error) {
+func (t *TrackingWasmerEngine) Instantiate(ctx sdk.Context, checksum wasmvm.Checksum, env wasmvmtypes.Env, info wasmvmtypes.MessageInfo, initMsg []byte, store PrefixStoreInfo, goapi wasmvm.GoAPI, querier QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.Response, uint64, error) {
 	const CurrentOperation = ContractOperationInstantiate
 	var contractAddress = env.Contract.Address
 
@@ -389,7 +412,7 @@ func (t *TrackingWasmerEngine) Instantiate(ctx sdk.Context, checksum wasmvm.Chec
 
 	prefixStore := prefix.NewStore(gaskv.NewStore(store.Store, &contractMeter, storetypes.KVGasConfig()), store.PrefixKey)
 
-	response, vmGasUsed, err := t.vm.Instantiate(checksum, env, info, initMsg, prefixStore, goapi, querier, gasMeter, gasLimit, deserCost)
+	response, vmGasUsed, err := t.vm.Instantiate(checksum, env, info, initMsg, NewStoreAdapter(prefixStore), goapi, querier, gasMeter, gasLimit, deserCost)
 
 	updatedGasInfo, trackingErr := t.getActualGas(ctx, CurrentOperation, contractAddress, GasConsumptionInfo{
 		SDKGas: 0,
@@ -427,7 +450,7 @@ func (t *TrackingWasmerEngine) Instantiate(ctx sdk.Context, checksum wasmvm.Chec
 	}
 }
 
-func (t *TrackingWasmerEngine) Execute(ctx sdk.Context, code wasmvm.Checksum, env wasmvmtypes.Env, info wasmvmtypes.MessageInfo, executeMsg []byte, store wasmvm.KVStore, goapi wasmvm.GoAPI, querier QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.Response, uint64, error) {
+func (t *TrackingWasmerEngine) Execute(ctx sdk.Context, code wasmvm.Checksum, env wasmvmtypes.Env, info wasmvmtypes.MessageInfo, executeMsg []byte, store PrefixStoreInfo, goapi wasmvm.GoAPI, querier QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.Response, uint64, error) {
 	const CurrentOperation = ContractOperationExecute
 	var contractAddress = env.Contract.Address
 
@@ -445,7 +468,7 @@ func (t *TrackingWasmerEngine) Execute(ctx sdk.Context, code wasmvm.Checksum, en
 
 	prefixStore := prefix.NewStore(gaskv.NewStore(store.Store, &contractMeter, storetypes.KVGasConfig()), store.PrefixKey)
 
-	response, vmGasUsed, err := t.vm.Execute(code, env, info, executeMsg, prefixStore, goapi, querier, gasMeter, gasLimit, deserCost)
+	response, vmGasUsed, err := t.vm.Execute(code, env, info, executeMsg, NewStoreAdapter(prefixStore), goapi, querier, gasMeter, gasLimit, deserCost)
 
 	updatedGasInfo, trackingErr := t.getActualGas(ctx, CurrentOperation, contractAddress, GasConsumptionInfo{
 		SDKGas: 0,
@@ -483,7 +506,7 @@ func (t *TrackingWasmerEngine) Execute(ctx sdk.Context, code wasmvm.Checksum, en
 	}
 }
 
-func (t *TrackingWasmerEngine) Migrate(ctx sdk.Context, checksum wasmvm.Checksum, env wasmvmtypes.Env, migrateMsg []byte, store wasmvm.KVStore, goapi wasmvm.GoAPI, querier QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.Response, uint64, error) {
+func (t *TrackingWasmerEngine) Migrate(ctx sdk.Context, checksum wasmvm.Checksum, env wasmvmtypes.Env, migrateMsg []byte, store PrefixStoreInfo, goapi wasmvm.GoAPI, querier QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.Response, uint64, error) {
 	const CurrentOperation = ContractOperationMigrate
 	var contractAddress = env.Contract.Address
 
@@ -501,7 +524,7 @@ func (t *TrackingWasmerEngine) Migrate(ctx sdk.Context, checksum wasmvm.Checksum
 
 	prefixStore := prefix.NewStore(gaskv.NewStore(store.Store, &contractMeter, storetypes.KVGasConfig()), store.PrefixKey)
 
-	response, vmGasUsed, err := t.vm.Migrate(checksum, env, migrateMsg, prefixStore, goapi, querier, gasMeter, gasLimit, deserCost)
+	response, vmGasUsed, err := t.vm.Migrate(checksum, env, migrateMsg, NewStoreAdapter(prefixStore), goapi, querier, gasMeter, gasLimit, deserCost)
 
 	updatedGasInfo, trackingErr := t.getActualGas(ctx, CurrentOperation, contractAddress, GasConsumptionInfo{
 		SDKGas: 0,
@@ -539,7 +562,7 @@ func (t *TrackingWasmerEngine) Migrate(ctx sdk.Context, checksum wasmvm.Checksum
 	}
 }
 
-func (t *TrackingWasmerEngine) Sudo(ctx sdk.Context, checksum wasmvm.Checksum, env wasmvmtypes.Env, sudoMsg []byte, store wasmvm.KVStore, goapi wasmvm.GoAPI, querier QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.Response, uint64, error) {
+func (t *TrackingWasmerEngine) Sudo(ctx sdk.Context, checksum wasmvm.Checksum, env wasmvmtypes.Env, sudoMsg []byte, store PrefixStoreInfo, goapi wasmvm.GoAPI, querier QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.Response, uint64, error) {
 	const CurrentOperation = ContractOperationSudo
 	var contractAddress = env.Contract.Address
 
@@ -557,7 +580,7 @@ func (t *TrackingWasmerEngine) Sudo(ctx sdk.Context, checksum wasmvm.Checksum, e
 
 	prefixStore := prefix.NewStore(gaskv.NewStore(store.Store, &contractMeter, storetypes.KVGasConfig()), store.PrefixKey)
 
-	response, vmGasUsed, err := t.vm.Sudo(checksum, env, sudoMsg, prefixStore, goapi, querier, gasMeter, gasLimit, deserCost)
+	response, vmGasUsed, err := t.vm.Sudo(checksum, env, sudoMsg, NewStoreAdapter(prefixStore), goapi, querier, gasMeter, gasLimit, deserCost)
 
 	updatedGasInfo, trackingErr := t.getActualGas(ctx, CurrentOperation, contractAddress, GasConsumptionInfo{
 		SDKGas: 0,
@@ -595,7 +618,7 @@ func (t *TrackingWasmerEngine) Sudo(ctx sdk.Context, checksum wasmvm.Checksum, e
 	}
 }
 
-func (t *TrackingWasmerEngine) Reply(ctx sdk.Context, checksum wasmvm.Checksum, env wasmvmtypes.Env, reply wasmvmtypes.Reply, store wasmvm.KVStore, goapi wasmvm.GoAPI, querier QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.Response, uint64, error) {
+func (t *TrackingWasmerEngine) Reply(ctx sdk.Context, checksum wasmvm.Checksum, env wasmvmtypes.Env, reply wasmvmtypes.Reply, store PrefixStoreInfo, goapi wasmvm.GoAPI, querier QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.Response, uint64, error) {
 	const CurrentOperation = ContractOperationReply
 	var contractAddress = env.Contract.Address
 
@@ -613,7 +636,7 @@ func (t *TrackingWasmerEngine) Reply(ctx sdk.Context, checksum wasmvm.Checksum, 
 
 	prefixStore := prefix.NewStore(gaskv.NewStore(store.Store, &contractMeter, storetypes.KVGasConfig()), store.PrefixKey)
 
-	response, vmGasUsed, err := t.vm.Reply(checksum, env, reply, prefixStore, goapi, querier, gasMeter, gasLimit, deserCost)
+	response, vmGasUsed, err := t.vm.Reply(checksum, env, reply, NewStoreAdapter(prefixStore), goapi, querier, gasMeter, gasLimit, deserCost)
 
 	updatedGasInfo, trackingErr := t.getActualGas(ctx, CurrentOperation, contractAddress, GasConsumptionInfo{
 		SDKGas: 0,
@@ -659,7 +682,7 @@ func (t *TrackingWasmerEngine) Cleanup() {
 	t.vm.Cleanup()
 }
 
-func (t *TrackingWasmerEngine) IBCChannelOpen(ctx sdk.Context, checksum wasmvm.Checksum, env wasmvmtypes.Env, channel wasmvmtypes.IBCChannelOpenMsg, store wasmvm.KVStore, goapi wasmvm.GoAPI, querier QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.IBC3ChannelOpenResponse, uint64, error) {
+func (t *TrackingWasmerEngine) IBCChannelOpen(ctx sdk.Context, checksum wasmvm.Checksum, env wasmvmtypes.Env, channel wasmvmtypes.IBCChannelOpenMsg, store PrefixStoreInfo, goapi wasmvm.GoAPI, querier QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.IBC3ChannelOpenResponse, uint64, error) {
 	const CurrentOperation = ContractOperationIbcChannelOpen
 	var contractAddress = env.Contract.Address
 
@@ -677,7 +700,7 @@ func (t *TrackingWasmerEngine) IBCChannelOpen(ctx sdk.Context, checksum wasmvm.C
 
 	prefixStore := prefix.NewStore(gaskv.NewStore(store.Store, &contractMeter, storetypes.KVGasConfig()), store.PrefixKey)
 
-	response, vmGasUsed, err := t.vm.IBCChannelOpen(checksum, env, channel, prefixStore, goapi, querier, gasMeter, gasLimit, deserCost)
+	response, vmGasUsed, err := t.vm.IBCChannelOpen(checksum, env, channel, NewStoreAdapter(prefixStore), goapi, querier, gasMeter, gasLimit, deserCost)
 
 	updatedGasInfo, trackingErr := t.getActualGas(ctx, CurrentOperation, contractAddress, GasConsumptionInfo{
 		SDKGas: 0,
@@ -715,7 +738,7 @@ func (t *TrackingWasmerEngine) IBCChannelOpen(ctx sdk.Context, checksum wasmvm.C
 	}
 }
 
-func (t *TrackingWasmerEngine) IBCChannelConnect(ctx sdk.Context, checksum wasmvm.Checksum, env wasmvmtypes.Env, channel wasmvmtypes.IBCChannelConnectMsg, store wasmvm.KVStore, goapi wasmvm.GoAPI, querier QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.IBCBasicResponse, uint64, error) {
+func (t *TrackingWasmerEngine) IBCChannelConnect(ctx sdk.Context, checksum wasmvm.Checksum, env wasmvmtypes.Env, channel wasmvmtypes.IBCChannelConnectMsg, store PrefixStoreInfo, goapi wasmvm.GoAPI, querier QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.IBCBasicResponse, uint64, error) {
 	const CurrentOperation = ContractOperationIbcChannelConnect
 	var contractAddress = env.Contract.Address
 
@@ -733,7 +756,7 @@ func (t *TrackingWasmerEngine) IBCChannelConnect(ctx sdk.Context, checksum wasmv
 
 	prefixStore := prefix.NewStore(gaskv.NewStore(store.Store, &contractMeter, storetypes.KVGasConfig()), store.PrefixKey)
 
-	response, vmGasUsed, err := t.vm.IBCChannelConnect(checksum, env, channel, prefixStore, goapi, querier, gasMeter, gasLimit, deserCost)
+	response, vmGasUsed, err := t.vm.IBCChannelConnect(checksum, env, channel, NewStoreAdapter(prefixStore), goapi, querier, gasMeter, gasLimit, deserCost)
 
 	updatedGasInfo, trackingErr := t.getActualGas(ctx, CurrentOperation, contractAddress, GasConsumptionInfo{
 		SDKGas: 0,
@@ -771,7 +794,7 @@ func (t *TrackingWasmerEngine) IBCChannelConnect(ctx sdk.Context, checksum wasmv
 	}
 }
 
-func (t *TrackingWasmerEngine) IBCChannelClose(ctx sdk.Context, checksum wasmvm.Checksum, env wasmvmtypes.Env, channel wasmvmtypes.IBCChannelCloseMsg, store wasmvm.KVStore, goapi wasmvm.GoAPI, querier QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.IBCBasicResponse, uint64, error) {
+func (t *TrackingWasmerEngine) IBCChannelClose(ctx sdk.Context, checksum wasmvm.Checksum, env wasmvmtypes.Env, channel wasmvmtypes.IBCChannelCloseMsg, store PrefixStoreInfo, goapi wasmvm.GoAPI, querier QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.IBCBasicResponse, uint64, error) {
 	const CurrentOperation = ContractOperationIbcChannelClose
 	var contractAddress = env.Contract.Address
 
@@ -789,7 +812,7 @@ func (t *TrackingWasmerEngine) IBCChannelClose(ctx sdk.Context, checksum wasmvm.
 
 	prefixStore := prefix.NewStore(gaskv.NewStore(store.Store, &contractMeter, storetypes.KVGasConfig()), store.PrefixKey)
 
-	response, vmGasUsed, err := t.vm.IBCChannelClose(checksum, env, channel, prefixStore, goapi, querier, gasMeter, gasLimit, deserCost)
+	response, vmGasUsed, err := t.vm.IBCChannelClose(checksum, env, channel, NewStoreAdapter(prefixStore), goapi, querier, gasMeter, gasLimit, deserCost)
 
 	updatedGasInfo, trackingErr := t.getActualGas(ctx, CurrentOperation, contractAddress, GasConsumptionInfo{
 		SDKGas: 0,
@@ -827,7 +850,7 @@ func (t *TrackingWasmerEngine) IBCChannelClose(ctx sdk.Context, checksum wasmvm.
 	}
 }
 
-func (t *TrackingWasmerEngine) IBCPacketReceive(ctx sdk.Context, checksum wasmvm.Checksum, env wasmvmtypes.Env, packet wasmvmtypes.IBCPacketReceiveMsg, store wasmvm.KVStore, goapi wasmvm.GoAPI, querier QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.IBCReceiveResult, uint64, error) {
+func (t *TrackingWasmerEngine) IBCPacketReceive(ctx sdk.Context, checksum wasmvm.Checksum, env wasmvmtypes.Env, packet wasmvmtypes.IBCPacketReceiveMsg, store PrefixStoreInfo, goapi wasmvm.GoAPI, querier QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.IBCReceiveResult, uint64, error) {
 	const CurrentOperation = ContractOperationIbcPacketReceive
 	var contractAddress = env.Contract.Address
 
@@ -845,7 +868,7 @@ func (t *TrackingWasmerEngine) IBCPacketReceive(ctx sdk.Context, checksum wasmvm
 
 	prefixStore := prefix.NewStore(gaskv.NewStore(store.Store, &contractMeter, storetypes.KVGasConfig()), store.PrefixKey)
 
-	response, vmGasUsed, err := t.vm.IBCPacketReceive(checksum, env, packet, prefixStore, goapi, querier, gasMeter, gasLimit, deserCost)
+	response, vmGasUsed, err := t.vm.IBCPacketReceive(checksum, env, packet, NewStoreAdapter(prefixStore), goapi, querier, gasMeter, gasLimit, deserCost)
 
 	updatedGasInfo, trackingErr := t.getActualGas(ctx, CurrentOperation, contractAddress, GasConsumptionInfo{
 		SDKGas: 0,
@@ -883,7 +906,7 @@ func (t *TrackingWasmerEngine) IBCPacketReceive(ctx sdk.Context, checksum wasmvm
 	}
 }
 
-func (t *TrackingWasmerEngine) IBCPacketAck(ctx sdk.Context, checksum wasmvm.Checksum, env wasmvmtypes.Env, ack wasmvmtypes.IBCPacketAckMsg, store wasmvm.KVStore, goapi wasmvm.GoAPI, querier QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.IBCBasicResponse, uint64, error) {
+func (t *TrackingWasmerEngine) IBCPacketAck(ctx sdk.Context, checksum wasmvm.Checksum, env wasmvmtypes.Env, ack wasmvmtypes.IBCPacketAckMsg, store PrefixStoreInfo, goapi wasmvm.GoAPI, querier QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.IBCBasicResponse, uint64, error) {
 	const CurrentOperation = ContractOperationIbcPacketAck
 	var contractAddress = env.Contract.Address
 
@@ -901,7 +924,7 @@ func (t *TrackingWasmerEngine) IBCPacketAck(ctx sdk.Context, checksum wasmvm.Che
 
 	prefixStore := prefix.NewStore(gaskv.NewStore(store.Store, &contractMeter, storetypes.KVGasConfig()), store.PrefixKey)
 
-	response, vmGasUsed, err := t.vm.IBCPacketAck(checksum, env, ack, prefixStore, goapi, querier, gasMeter, gasLimit, deserCost)
+	response, vmGasUsed, err := t.vm.IBCPacketAck(checksum, env, ack, NewStoreAdapter(prefixStore), goapi, querier, gasMeter, gasLimit, deserCost)
 
 	updatedGasInfo, trackingErr := t.getActualGas(ctx, CurrentOperation, contractAddress, GasConsumptionInfo{
 		SDKGas: 0,
@@ -939,7 +962,7 @@ func (t *TrackingWasmerEngine) IBCPacketAck(ctx sdk.Context, checksum wasmvm.Che
 	}
 }
 
-func (t *TrackingWasmerEngine) IBCPacketTimeout(ctx sdk.Context, checksum wasmvm.Checksum, env wasmvmtypes.Env, packet wasmvmtypes.IBCPacketTimeoutMsg, store wasmvm.KVStore, goapi wasmvm.GoAPI, querier QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.IBCBasicResponse, uint64, error) {
+func (t *TrackingWasmerEngine) IBCPacketTimeout(ctx sdk.Context, checksum wasmvm.Checksum, env wasmvmtypes.Env, packet wasmvmtypes.IBCPacketTimeoutMsg, store PrefixStoreInfo, goapi wasmvm.GoAPI, querier QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.IBCBasicResponse, uint64, error) {
 	const CurrentOperation = ContractOperationIbcPacketTimeout
 	var contractAddress = env.Contract.Address
 
@@ -957,7 +980,7 @@ func (t *TrackingWasmerEngine) IBCPacketTimeout(ctx sdk.Context, checksum wasmvm
 
 	prefixStore := prefix.NewStore(gaskv.NewStore(store.Store, &contractMeter, storetypes.KVGasConfig()), store.PrefixKey)
 
-	response, vmGasUsed, err := t.vm.IBCPacketTimeout(checksum, env, packet, prefixStore, goapi, querier, gasMeter, gasLimit, deserCost)
+	response, vmGasUsed, err := t.vm.IBCPacketTimeout(checksum, env, packet, NewStoreAdapter(prefixStore), goapi, querier, gasMeter, gasLimit, deserCost)
 
 	updatedGasInfo, trackingErr := t.getActualGas(ctx, CurrentOperation, contractAddress, GasConsumptionInfo{
 		SDKGas: 0,
@@ -1007,4 +1030,4 @@ func (t *TrackingWasmerEngine) GetMetrics() (*wasmvmtypes.Metrics, error) {
 	return t.vm.GetMetrics()
 }
 
-var _ WasmerEngine = &TrackingWasmerEngine{}
+var _ WasmEngine = &TrackingWasmerEngine{}

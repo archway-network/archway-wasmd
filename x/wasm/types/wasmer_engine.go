@@ -16,6 +16,18 @@ type QuerierWithCtx interface {
 	GetCtx() *sdk.Context
 }
 
+type PrefixStoreInfo struct {
+	Store     storetypes.KVStore
+	PrefixKey []byte
+}
+
+func NewPrefixStore(store storetypes.KVStore, prefixKey []byte) PrefixStoreInfo {
+	return PrefixStoreInfo{
+		Store:     store,
+		PrefixKey: prefixKey,
+	}
+}
+
 // WasmEngine defines the WASM contract runtime engine.
 type WasmEngine interface {
 	// Create will compile the wasm code, and store the resulting pre-compile
@@ -57,11 +69,12 @@ type WasmEngine interface {
 	// Under the hood, we may recompile the wasm, use a cached native compile, or even use a cached instance
 	// for performance.
 	Instantiate(
+		ctx sdk.Context,
 		checksum wasmvm.Checksum,
 		env wasmvmtypes.Env,
 		info wasmvmtypes.MessageInfo,
 		initMsg []byte,
-		store wasmvm.KVStore,
+		store PrefixStoreInfo,
 		goapi wasmvm.GoAPI,
 		querier QuerierWithCtx,
 		gasMeter wasmvm.GasMeter,
@@ -76,11 +89,12 @@ type WasmEngine interface {
 	// The caller is responsible for passing the correct `store` (which must have been initialized exactly once),
 	// and setting the env with relevant info on this instance (address, balance, etc)
 	Execute(
+		ctx sdk.Context,
 		code wasmvm.Checksum,
 		env wasmvmtypes.Env,
 		info wasmvmtypes.MessageInfo,
 		executeMsg []byte,
-		store wasmvm.KVStore,
+		store PrefixStoreInfo,
 		goapi wasmvm.GoAPI,
 		querier QuerierWithCtx,
 		gasMeter wasmvm.GasMeter,
@@ -92,10 +106,11 @@ type WasmEngine interface {
 	// valid json-encoded data to return to the client.
 	// The meaning of path and data can be determined by the code. Path is the suffix of the abci.QueryRequest.Path
 	Query(
+		ctx sdk.Context,
 		code wasmvm.Checksum,
 		env wasmvmtypes.Env,
 		queryMsg []byte,
-		store wasmvm.KVStore,
+		store PrefixStoreInfo,
 		goapi wasmvm.GoAPI,
 		querier QuerierWithCtx,
 		gasMeter wasmvm.GasMeter,
@@ -110,10 +125,11 @@ type WasmEngine interface {
 	//
 	// MigrateMsg has some data on how to perform the migration.
 	Migrate(
+		ctx sdk.Context,
 		checksum wasmvm.Checksum,
 		env wasmvmtypes.Env,
 		migrateMsg []byte,
-		store wasmvm.KVStore,
+		store PrefixStoreInfo,
 		goapi wasmvm.GoAPI,
 		querier QuerierWithCtx,
 		gasMeter wasmvm.GasMeter,
@@ -127,10 +143,11 @@ type WasmEngine interface {
 	// This allows a contract to expose custom "super user" functions or priviledged operations that can be
 	// deeply integrated with native modules.
 	Sudo(
+		ctx sdk.Context,
 		checksum wasmvm.Checksum,
 		env wasmvmtypes.Env,
 		sudoMsg []byte,
-		store wasmvm.KVStore,
+		store PrefixStoreInfo,
 		goapi wasmvm.GoAPI,
 		querier QuerierWithCtx,
 		gasMeter wasmvm.GasMeter,
@@ -140,10 +157,11 @@ type WasmEngine interface {
 
 	// Reply is called on the original dispatching contract after running a submessage
 	Reply(
+		ctx sdk.Context,
 		checksum wasmvm.Checksum,
 		env wasmvmtypes.Env,
 		reply wasmvmtypes.Reply,
-		store wasmvm.KVStore,
+		store PrefixStoreInfo,
 		goapi wasmvm.GoAPI,
 		querier QuerierWithCtx,
 		gasMeter wasmvm.GasMeter,
@@ -166,10 +184,11 @@ type WasmEngine interface {
 	// IBCChannelOpen is available on IBC-enabled contracts and is a hook to call into
 	// during the handshake phase
 	IBCChannelOpen(
+		ctx sdk.Context,
 		checksum wasmvm.Checksum,
 		env wasmvmtypes.Env,
 		channel wasmvmtypes.IBCChannelOpenMsg,
-		store wasmvm.KVStore,
+		store PrefixStoreInfo,
 		goapi wasmvm.GoAPI,
 		querier QuerierWithCtx,
 		gasMeter wasmvm.GasMeter,
@@ -180,10 +199,11 @@ type WasmEngine interface {
 	// IBCChannelConnect is available on IBC-enabled contracts and is a hook to call into
 	// during the handshake phase
 	IBCChannelConnect(
+		ctx sdk.Context,
 		checksum wasmvm.Checksum,
 		env wasmvmtypes.Env,
 		channel wasmvmtypes.IBCChannelConnectMsg,
-		store wasmvm.KVStore,
+		store PrefixStoreInfo,
 		goapi wasmvm.GoAPI,
 		querier QuerierWithCtx,
 		gasMeter wasmvm.GasMeter,
@@ -194,10 +214,11 @@ type WasmEngine interface {
 	// IBCChannelClose is available on IBC-enabled contracts and is a hook to call into
 	// at the end of the channel lifetime
 	IBCChannelClose(
+		ctx sdk.Context,
 		checksum wasmvm.Checksum,
 		env wasmvmtypes.Env,
 		channel wasmvmtypes.IBCChannelCloseMsg,
-		store wasmvm.KVStore,
+		store PrefixStoreInfo,
 		goapi wasmvm.GoAPI,
 		querier QuerierWithCtx,
 		gasMeter wasmvm.GasMeter,
@@ -208,10 +229,11 @@ type WasmEngine interface {
 	// IBCPacketReceive is available on IBC-enabled contracts and is called when an incoming
 	// packet is received on a channel belonging to this contract
 	IBCPacketReceive(
+		ctx sdk.Context,
 		checksum wasmvm.Checksum,
 		env wasmvmtypes.Env,
 		packet wasmvmtypes.IBCPacketReceiveMsg,
-		store wasmvm.KVStore,
+		store PrefixStoreInfo,
 		goapi wasmvm.GoAPI,
 		querier QuerierWithCtx,
 		gasMeter wasmvm.GasMeter,
@@ -223,10 +245,11 @@ type WasmEngine interface {
 	// the response for an outgoing packet (previously sent by this contract)
 	// is received
 	IBCPacketAck(
+		ctx sdk.Context,
 		checksum wasmvm.Checksum,
 		env wasmvmtypes.Env,
 		ack wasmvmtypes.IBCPacketAckMsg,
-		store wasmvm.KVStore,
+		store PrefixStoreInfo,
 		goapi wasmvm.GoAPI,
 		querier QuerierWithCtx,
 		gasMeter wasmvm.GasMeter,
@@ -238,10 +261,11 @@ type WasmEngine interface {
 	// outgoing packet (previously sent by this contract) will probably never be executed.
 	// Usually handled like ack returning an error
 	IBCPacketTimeout(
+		ctx sdk.Context,
 		checksum wasmvm.Checksum,
 		env wasmvmtypes.Env,
 		packet wasmvmtypes.IBCPacketTimeoutMsg,
-		store wasmvm.KVStore,
+		store PrefixStoreInfo,
 		goapi wasmvm.GoAPI,
 		querier QuerierWithCtx,
 		gasMeter wasmvm.GasMeter,
