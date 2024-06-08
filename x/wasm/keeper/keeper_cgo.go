@@ -38,10 +38,14 @@ func NewKeeper(
 	opts ...Option,
 ) Keeper {
 	sb := collections.NewSchemaBuilder(storeService)
+	wasmer, err := wasmvm.NewVM(filepath.Join(homeDir, "wasm"), availableCapabilities, contractMemoryLimit, wasmConfig.ContractDebugMode, wasmConfig.MemoryCacheSize)
+	if err != nil {
+		panic(err)
+	}
 	keeper := &Keeper{
 		storeService:         storeService,
 		cdc:                  cdc,
-		wasmVM:               nil,
+		wasmVM:               types.NewTrackingWasmerEngine(wasmer, &types.NoOpContractGasProcessor{}),
 		accountKeeper:        accountKeeper,
 		bank:                 NewBankCoinTransferrer(bankKeeper),
 		accountPruner:        NewVestingCoinBurner(bankKeeper),
@@ -62,15 +66,6 @@ func NewKeeper(
 	preOpts, postOpts := splitOpts(opts)
 	for _, o := range preOpts {
 		o.apply(keeper)
-	}
-	// only set the wasmvm if no one set this in the options
-	// NewVM does a lot, so better not to create it and silently drop it.
-	if keeper.wasmVM == nil {
-		var err error
-		keeper.wasmVM, err = wasmvm.NewVM(filepath.Join(homeDir, "wasm"), availableCapabilities, contractMemoryLimit, wasmConfig.ContractDebugMode, wasmConfig.MemoryCacheSize)
-		if err != nil {
-			panic(err)
-		}
 	}
 
 	for _, o := range postOpts {
