@@ -3,12 +3,18 @@ package types
 import (
 	wasmvm "github.com/CosmWasm/wasmvm"
 	wasmvmtypes "github.com/CosmWasm/wasmvm/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	storetypes "cosmossdk.io/store/types"
 )
 
 // DefaultMaxQueryStackSize maximum size of the stack of contract instances doing queries
 const DefaultMaxQueryStackSize uint32 = 10
+
+type QuerierWithCtx interface {
+	wasmvm.Querier
+	GetCtx() *sdk.Context
+}
 
 // WasmEngine defines the WASM contract runtime engine.
 type WasmEngine interface {
@@ -57,7 +63,7 @@ type WasmEngine interface {
 		initMsg []byte,
 		store wasmvm.KVStore,
 		goapi wasmvm.GoAPI,
-		querier wasmvm.Querier,
+		querier QuerierWithCtx,
 		gasMeter wasmvm.GasMeter,
 		gasLimit uint64,
 		deserCost wasmvmtypes.UFraction,
@@ -76,7 +82,7 @@ type WasmEngine interface {
 		executeMsg []byte,
 		store wasmvm.KVStore,
 		goapi wasmvm.GoAPI,
-		querier wasmvm.Querier,
+		querier QuerierWithCtx,
 		gasMeter wasmvm.GasMeter,
 		gasLimit uint64,
 		deserCost wasmvmtypes.UFraction,
@@ -91,7 +97,7 @@ type WasmEngine interface {
 		queryMsg []byte,
 		store wasmvm.KVStore,
 		goapi wasmvm.GoAPI,
-		querier wasmvm.Querier,
+		querier QuerierWithCtx,
 		gasMeter wasmvm.GasMeter,
 		gasLimit uint64,
 		deserCost wasmvmtypes.UFraction,
@@ -109,7 +115,7 @@ type WasmEngine interface {
 		migrateMsg []byte,
 		store wasmvm.KVStore,
 		goapi wasmvm.GoAPI,
-		querier wasmvm.Querier,
+		querier QuerierWithCtx,
 		gasMeter wasmvm.GasMeter,
 		gasLimit uint64,
 		deserCost wasmvmtypes.UFraction,
@@ -126,7 +132,7 @@ type WasmEngine interface {
 		sudoMsg []byte,
 		store wasmvm.KVStore,
 		goapi wasmvm.GoAPI,
-		querier wasmvm.Querier,
+		querier QuerierWithCtx,
 		gasMeter wasmvm.GasMeter,
 		gasLimit uint64,
 		deserCost wasmvmtypes.UFraction,
@@ -139,7 +145,7 @@ type WasmEngine interface {
 		reply wasmvmtypes.Reply,
 		store wasmvm.KVStore,
 		goapi wasmvm.GoAPI,
-		querier wasmvm.Querier,
+		querier QuerierWithCtx,
 		gasMeter wasmvm.GasMeter,
 		gasLimit uint64,
 		deserCost wasmvmtypes.UFraction,
@@ -165,7 +171,7 @@ type WasmEngine interface {
 		channel wasmvmtypes.IBCChannelOpenMsg,
 		store wasmvm.KVStore,
 		goapi wasmvm.GoAPI,
-		querier wasmvm.Querier,
+		querier QuerierWithCtx,
 		gasMeter wasmvm.GasMeter,
 		gasLimit uint64,
 		deserCost wasmvmtypes.UFraction,
@@ -179,7 +185,7 @@ type WasmEngine interface {
 		channel wasmvmtypes.IBCChannelConnectMsg,
 		store wasmvm.KVStore,
 		goapi wasmvm.GoAPI,
-		querier wasmvm.Querier,
+		querier QuerierWithCtx,
 		gasMeter wasmvm.GasMeter,
 		gasLimit uint64,
 		deserCost wasmvmtypes.UFraction,
@@ -193,7 +199,7 @@ type WasmEngine interface {
 		channel wasmvmtypes.IBCChannelCloseMsg,
 		store wasmvm.KVStore,
 		goapi wasmvm.GoAPI,
-		querier wasmvm.Querier,
+		querier QuerierWithCtx,
 		gasMeter wasmvm.GasMeter,
 		gasLimit uint64,
 		deserCost wasmvmtypes.UFraction,
@@ -207,7 +213,7 @@ type WasmEngine interface {
 		packet wasmvmtypes.IBCPacketReceiveMsg,
 		store wasmvm.KVStore,
 		goapi wasmvm.GoAPI,
-		querier wasmvm.Querier,
+		querier QuerierWithCtx,
 		gasMeter wasmvm.GasMeter,
 		gasLimit uint64,
 		deserCost wasmvmtypes.UFraction,
@@ -222,7 +228,7 @@ type WasmEngine interface {
 		ack wasmvmtypes.IBCPacketAckMsg,
 		store wasmvm.KVStore,
 		goapi wasmvm.GoAPI,
-		querier wasmvm.Querier,
+		querier QuerierWithCtx,
 		gasMeter wasmvm.GasMeter,
 		gasLimit uint64,
 		deserCost wasmvmtypes.UFraction,
@@ -237,7 +243,7 @@ type WasmEngine interface {
 		packet wasmvmtypes.IBCPacketTimeoutMsg,
 		store wasmvm.KVStore,
 		goapi wasmvm.GoAPI,
-		querier wasmvm.Querier,
+		querier QuerierWithCtx,
 		gasMeter wasmvm.GasMeter,
 		gasLimit uint64,
 		deserCost wasmvmtypes.UFraction,
@@ -256,6 +262,9 @@ type WasmEngine interface {
 
 	// GetMetrics some internal metrics for monitoring purposes.
 	GetMetrics() (*wasmvmtypes.Metrics, error)
+
+	// SetGasRecorder sets the gas recorder that records contract gas usage
+	SetGasRecorder(gasRecorder ContractGasProcessor)
 }
 
 var _ wasmvm.KVStore = &StoreAdapter{}
