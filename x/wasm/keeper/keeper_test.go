@@ -419,7 +419,7 @@ func TestInstantiate(t *testing.T) {
 
 	gasAfter := ctx.GasMeter().GasConsumed()
 	if types.EnableGasVerification {
-		require.Equal(t, uint64(0x1bc64), gasAfter-gasBefore)
+		require.Equal(t, uint64(0x1e018), gasAfter-gasBefore)
 	}
 
 	// ensure it is stored properly
@@ -782,6 +782,19 @@ func TestInstantiateWithContractFactoryChildQueriesParent(t *testing.T) {
 	callbacks[1] = func(codeID wasmvm.Checksum, env wasmvmtypes.Env, info wasmvmtypes.MessageInfo, initMsg []byte, store types.PrefixStoreInfo, goapi wasmvm.GoAPI, querier types.QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.Response, uint64, error) {
 		t.Log("called child")
 		capturedSenderAddr = info.Sender
+
+		// Initialize gas tracking for contract
+		initialGasMeter := types.NewContractGasMeter(30000000, func(_ uint64, info types.GasConsumptionInfo) types.GasConsumptionInfo {
+			return types.GasConsumptionInfo{
+				SDKGas: info.SDKGas * 2,
+			}
+		}, capturedSenderAddr, types.ContractOperationQuery)
+
+		q := querier.(*QueryHandler) // get query handler context to start gas tracking otherwise an error will happen
+		e := types.InitializeGasTracking(&q.Ctx, &initialGasMeter)
+
+		require.NoError(t, e, "could not start contract gas tracking")
+
 		var err error
 		capturedCodeInfo, err = querier.Query(wasmvmtypes.QueryRequest{
 			Wasm: &wasmvmtypes.WasmQuery{
@@ -863,7 +876,7 @@ func TestExecute(t *testing.T) {
 	// make sure gas is properly deducted from ctx
 	gasAfter := ctx.GasMeter().GasConsumed()
 	if types.EnableGasVerification {
-		require.Equal(t, uint64(0x1ac6a), gasAfter-gasBefore)
+		require.Equal(t, uint64(0x1b31c), gasAfter-gasBefore)
 	}
 	// ensure bob now exists and got both payments released
 	bobAcct = accKeeper.GetAccount(ctx, bob)
@@ -1957,6 +1970,16 @@ func TestReply(t *testing.T) {
 	wasmtesting.MakeInstantiable(&mock)
 	example := SeedNewContractInstance(t, ctx, keepers, &mock)
 
+	initialGasMeter := types.NewContractGasMeter(30000000, func(_ uint64, info types.GasConsumptionInfo) types.GasConsumptionInfo {
+		return types.GasConsumptionInfo{
+			SDKGas: info.SDKGas * 2,
+		}
+	}, example.Contract.String(), types.ContractOperationQuery)
+
+	// { Initialization
+	err := types.InitializeGasTracking(&ctx, &initialGasMeter)
+	require.NoError(t, err, "could not start contract gas tracking")
+
 	specs := map[string]struct {
 		replyFn func(codeID wasmvm.Checksum, env wasmvmtypes.Env, reply wasmvmtypes.Reply, store types.PrefixStoreInfo, goapi wasmvm.GoAPI, querier types.QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.Response, uint64, error)
 		expData []byte
@@ -2025,6 +2048,17 @@ func TestQueryIsolation(t *testing.T) {
 	var mock wasmtesting.MockWasmEngine
 	wasmtesting.MakeInstantiable(&mock)
 	example := SeedNewContractInstance(t, ctx, keepers, &mock)
+
+	initialGasMeter := types.NewContractGasMeter(30000000, func(_ uint64, info types.GasConsumptionInfo) types.GasConsumptionInfo {
+		return types.GasConsumptionInfo{
+			SDKGas: info.SDKGas * 2,
+		}
+	}, example.Contract.String(), types.ContractOperationQuery)
+
+	// { Initialization
+	err := types.InitializeGasTracking(&ctx, &initialGasMeter)
+	require.NoError(t, err, "could not start contract gas tracking")
+
 	WithQueryHandlerDecorator(func(other WasmVMQueryHandler) WasmVMQueryHandler {
 		return WasmVMQueryHandlerFn(func(ctx sdk.Context, caller sdk.AccAddress, request wasmvmtypes.QueryRequest) ([]byte, error) {
 			if request.Custom == nil {

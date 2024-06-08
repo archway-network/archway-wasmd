@@ -4,7 +4,6 @@ import (
 	"reflect"
 	"testing"
 
-	wasmvm "github.com/CosmWasm/wasmvm"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -48,7 +47,7 @@ func TestConstructorOptions(t *testing.T) {
 		},
 		"decorate wasmvm": {
 			srcOpt: WithWasmEngineDecorator(func(old types.WasmEngine) types.WasmEngine {
-				require.IsType(t, &wasmvm.VM{}, old)
+				require.IsType(t, &types.TrackingWasmerEngine{}, old)
 				return &wasmtesting.MockWasmEngine{}
 			}),
 			verify: func(t *testing.T, k Keeper) {
