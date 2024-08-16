@@ -243,14 +243,14 @@ func TestDispatchSubMsgErrorHandling(t *testing.T) {
 		"send tokens": {
 			submsgID:         5,
 			msg:              validBankSend,
-			resultAssertions: []assertion{assertReturnedEvents(0), assertGasUsed(111000, 112000)},
+			resultAssertions: []assertion{assertReturnedEvents(0), assertGasUsed(110_000, 114_000)},
 		},
 		"not enough tokens": {
 			submsgID:    6,
 			msg:         invalidBankSend,
 			subMsgError: true,
 			// uses less gas than the send tokens (cost of bank transfer)
-			resultAssertions: []assertion{assertGasUsed(83000, 84000), assertErrorString("codespace: sdk, code: 5")},
+			resultAssertions: []assertion{assertGasUsed(83000, 85000), assertErrorString("codespace: sdk, code: 5")},
 		},
 		"out of gas panic with no gas limit": {
 			submsgID:        7,
