@@ -268,10 +268,8 @@ func TestLimitRecursiveQueryGas(t *testing.T) {
 			},
 			expectQueriesFromContract: 10,
 			expectOutOfGas:            false,
-			expectError:               "query wasm contract failed",                                                 // Error we get from the contract instance doing the failing query, not wasmd
-			expectedGas:               GasWork2k + GasReturnHashed + 9*(GasWork2kDiscounted+GasReturnHashed) + 3279, // lots of additional gas for long error message
-			//expectError:               "query wasm contract failed",               // Error we get from the contract instance doing the failing query, not wasmd
-			//expectedGas:               10*(GasWork2k+GasReturnHashed) - 249 + 901, // NOTE: investigation on this is required, higher consumption than vanila wasmd, also needs quantification instead of arbitrary
+			expectError:               "query wasm contract failed",         // Error we get from the contract instance doing the failing query, not wasmd
+			expectedGas:               10*(GasWork2k+GasReturnHashed) + 631, // NOTE: investigation on this is required, higher consumption than vanila wasmd, also needs quantification instead of arbitrary
 		},
 	}
 

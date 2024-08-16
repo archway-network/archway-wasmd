@@ -243,14 +243,18 @@ func TestDispatchSubMsgErrorHandling(t *testing.T) {
 		"send tokens": {
 			submsgID:         5,
 			msg:              validBankSend,
+<<<<<<< HEAD
 			resultAssertions: []assertion{assertReturnedEvents(0), assertGasUsed(110_000, 112_000)},
+=======
+			resultAssertions: []assertion{assertReturnedEvents(0), assertGasUsed(110_000, 114_000)},
+>>>>>>> 91c89083... fix: apply patch for CWA-2024-004
 		},
 		"not enough tokens": {
 			submsgID:    6,
 			msg:         invalidBankSend,
 			subMsgError: true,
 			// uses less gas than the send tokens (cost of bank transfer)
-			resultAssertions: []assertion{assertGasUsed(83000, 84000), assertErrorString("codespace: sdk, code: 5")},
+			resultAssertions: []assertion{assertGasUsed(83000, 85000), assertErrorString("codespace: sdk, code: 5")},
 		},
 		"out of gas panic with no gas limit": {
 			submsgID:        7,
