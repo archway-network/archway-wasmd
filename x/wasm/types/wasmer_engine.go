@@ -11,6 +11,8 @@ import (
 // DefaultMaxQueryStackSize maximum size of the stack of contract instances doing queries
 const DefaultMaxQueryStackSize uint32 = 10
 
+const DefaultMaxCallDepth uint32 = 500
+
 type QuerierWithCtx interface {
 	wasmvm.Querier
 	GetCtx() *sdk.Context

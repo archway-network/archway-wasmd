@@ -99,6 +99,7 @@ type Keeper struct {
 	gasRegister          types.GasRegister
 	maxQueryStackSize    uint32
 	acceptedAccountTypes map[reflect.Type]struct{}
+	maxCallDepth         uint32
 	accountPruner        AccountPruner
 	params               collections.Item[types.Params]
 	// propagate gov authZ to sub-messages
@@ -310,7 +311,7 @@ func (k Keeper) instantiate(
 	// create prefixed data store
 	// 0x03 | BuildContractAddressClassic (sdk.AccAddress)
 	prefixStoreKey := types.GetContractStorePrefix(contractAddress)
-	//vmStore := types.NewStoreAdapter(prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(sdkCtx)), prefixStoreKey))
+	// vmStore := types.NewStoreAdapter(prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(sdkCtx)), prefixStoreKey))
 	prefixStore := types.PrefixStoreInfo{PrefixKey: prefixStoreKey, Store: runtime.KVStoreAdapter(k.storeService.OpenKVStore(sdkCtx))}
 
 	// prepare querier
@@ -819,7 +820,7 @@ func (k Keeper) contractInstance(ctx context.Context, contractAddress sdk.AccAdd
 	var codeInfo types.CodeInfo
 	k.cdc.MustUnmarshal(codeInfoBz, &codeInfo)
 	prefixStoreKey := types.GetContractStorePrefix(contractAddress)
-	//prefixStore := prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx)), prefixStoreKey)
+	// prefixStore := prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx)), prefixStoreKey)
 	prefixStore := types.PrefixStoreInfo{PrefixKey: prefixStoreKey, Store: runtime.KVStoreAdapter(store)}
 	return contractInfo, codeInfo, prefixStore, nil
 }
@@ -869,6 +870,24 @@ func (k Keeper) IterateContractInfo(ctx context.Context, cb func(sdk.AccAddress,
 			break
 		}
 	}
+}
+
+func checkAndIncreaseCallDepth(ctx context.Context, maxCallDepth uint32) (sdk.Context, error) {
+	var callDepth uint32 = 0
+	if size, ok := types.CallDepth(ctx); ok {
+		callDepth = size
+	}
+
+	// increase
+	callDepth++
+
+	// did we go too far?
+	if callDepth > maxCallDepth {
+		return sdk.Context{}, types.ErrExceedMaxCallDepth
+	}
+
+	// set updated stack size
+	return types.WithCallDepth(sdk.UnwrapSDKContext(ctx), callDepth), nil
 }
 
 // IterateContractState iterates through all elements of the key value store for the given contract address and passes
