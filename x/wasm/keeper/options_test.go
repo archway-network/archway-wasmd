@@ -121,6 +121,12 @@ func TestConstructorOptions(t *testing.T) {
 				assert.Equal(t, uint32(1), k.maxCallDepth)
 			},
 		},
+		"max message recursion limit": {
+			srcOpt: WithMaxCallDepth(1),
+			verify: func(t *testing.T, k Keeper) {
+				assert.Equal(t, uint32(1), k.maxCallDepth)
+			},
+		},
 		"accepted account types": {
 			srcOpt: WithAcceptedAccountTypesOnContractInstantiation(&authtypes.BaseAccount{}, &vestingtypes.ContinuousVestingAccount{}),
 			verify: func(t *testing.T, k Keeper) {
