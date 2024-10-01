@@ -58,7 +58,7 @@ func (q QueryHandler) Query(request wasmvmtypes.QueryRequest, gasLimit uint64) (
 	}
 
 	// discard all changes/ events in subCtx by not committing the cached context
-	subCtx, _ := q.Ctx.CacheContext() //Instead, use prepare gas tracking sub ctx
+	subCtx, _ := q.Ctx.CacheContext() // Instead, use prepare gas tracking sub ctx
 
 	defer func() {
 		destroySessionErr := types.DestroySession(&q.Ctx)

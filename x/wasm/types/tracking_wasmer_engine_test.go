@@ -10,12 +10,12 @@ import (
 	storemetrics "cosmossdk.io/store/metrics"
 	storetypes "cosmossdk.io/store/types"
 	cosmwasm "github.com/CosmWasm/wasmvm/v2"
-	wasmvm "github.com/CosmWasm/wasmvm/v2"
 	wasmvmtypes "github.com/CosmWasm/wasmvm/v2/types"
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	db "github.com/cosmos/cosmos-db"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 type testError struct{}
@@ -33,9 +33,11 @@ type loggingVMLog struct {
 
 type loggingVMLogs []loggingVMLog
 
-var _ QuerierWithCtx = &testQuerier{}
-var _ BareWasmVM = &loggingVM{}
-var _ ContractGasProcessor = &testGasProcessor{}
+var (
+	_ QuerierWithCtx       = &testQuerier{}
+	_ BareWasmVM           = &loggingVM{}
+	_ ContractGasProcessor = &testGasProcessor{}
+)
 
 type testGasProcessor struct {
 	ingestedRecords []ContractGasRecord
@@ -109,7 +111,7 @@ func (l *loggingVM) Create(code cosmwasm.WasmCode) (cosmwasm.Checksum, error) {
 	panic("Deprecated: use StoreCode instead")
 }
 
-func (l *loggingVM) StoreCode(code wasmvm.WasmCode, gasLimit uint64) (wasmvm.Checksum, uint64, error) {
+func (l *loggingVM) StoreCode(code cosmwasm.WasmCode, gasLimit uint64) (cosmwasm.Checksum, uint64, error) {
 	if l.Fail {
 		return cosmwasm.Checksum{}, 0, errTestFail
 	}
@@ -131,7 +133,7 @@ func (l *loggingVM) StoreCodeUnchecked(code cosmwasm.WasmCode) (cosmwasm.Checksu
 	return cosmwasm.Checksum{}, nil
 }
 
-func (l *loggingVM) SimulateStoreCode(code wasmvm.WasmCode, gasLimit uint64) (wasmvm.Checksum, uint64, error) {
+func (l *loggingVM) SimulateStoreCode(code cosmwasm.WasmCode, gasLimit uint64) (cosmwasm.Checksum, uint64, error) {
 	panic("not implemented in test")
 }
 
@@ -210,7 +212,7 @@ func (l *loggingVM) Migrate(checksum cosmwasm.Checksum, env wasmvmtypes.Env, mig
 	return &wasmvmtypes.ContractResult{}, currentOperationGas, nil
 }
 
-func (l *loggingVM) MigrateWithInfo(checksum wasmvm.Checksum, env wasmvmtypes.Env, migrateMsg []byte, migrateInfo wasmvmtypes.MigrateInfo, store cosmwasm.KVStore, goapi wasmvm.GoAPI, querier cosmwasm.Querier, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.ContractResult, uint64, error) {
+func (l *loggingVM) MigrateWithInfo(checksum cosmwasm.Checksum, env wasmvmtypes.Env, migrateMsg []byte, migrateInfo wasmvmtypes.MigrateInfo, store cosmwasm.KVStore, goapi cosmwasm.GoAPI, querier cosmwasm.Querier, gasMeter cosmwasm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.ContractResult, uint64, error) {
 	panic("not implemented in test")
 }
 
@@ -254,11 +256,11 @@ func (l *loggingVM) Cleanup() {
 	panic("not implemented in test")
 }
 
-func (l *loggingVM) IBCSourceCallback(codeID wasmvm.Checksum, env wasmvmtypes.Env, msg wasmvmtypes.IBCSourceCallbackMsg, store cosmwasm.KVStore, goapi wasmvm.GoAPI, querier cosmwasm.Querier, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.IBCBasicResult, uint64, error) {
+func (l *loggingVM) IBCSourceCallback(codeID cosmwasm.Checksum, env wasmvmtypes.Env, msg wasmvmtypes.IBCSourceCallbackMsg, store cosmwasm.KVStore, goapi cosmwasm.GoAPI, querier cosmwasm.Querier, gasMeter cosmwasm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.IBCBasicResult, uint64, error) {
 	panic("not implemented in test")
 }
 
-func (l *loggingVM) IBCDestinationCallback(codeID wasmvm.Checksum, env wasmvmtypes.Env, msg wasmvmtypes.IBCDestinationCallbackMsg, store cosmwasm.KVStore, goapi wasmvm.GoAPI, querier cosmwasm.Querier, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.IBCBasicResult, uint64, error) {
+func (l *loggingVM) IBCDestinationCallback(codeID cosmwasm.Checksum, env wasmvmtypes.Env, msg wasmvmtypes.IBCDestinationCallbackMsg, store cosmwasm.KVStore, goapi cosmwasm.GoAPI, querier cosmwasm.Querier, gasMeter cosmwasm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.IBCBasicResult, uint64, error) {
 	panic("not implemented in test")
 }
 

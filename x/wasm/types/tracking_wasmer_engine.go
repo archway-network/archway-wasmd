@@ -398,7 +398,7 @@ func (t *TrackingWasmerEngine) AnalyzeCode(checksum wasmvm.Checksum) (*wasmvmtyp
 
 func (t *TrackingWasmerEngine) Query(ctx sdk.Context, code wasmvm.Checksum, env wasmvmtypes.Env, queryMsg []byte, store PrefixStoreInfo, goapi wasmvm.GoAPI, querier QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.QueryResult, uint64, error) {
 	const CurrentOperation = ContractOperationQuery
-	var contractAddress = env.Contract.Address
+	contractAddress := env.Contract.Address
 
 	gasCalcFn, err := t.gasProcessor.GetGasCalculationFn(ctx, contractAddress)
 	if err != nil {
@@ -447,7 +447,7 @@ func (t *TrackingWasmerEngine) Query(ctx sdk.Context, code wasmvm.Checksum, env 
 
 func (t *TrackingWasmerEngine) Instantiate(ctx sdk.Context, checksum wasmvm.Checksum, env wasmvmtypes.Env, info wasmvmtypes.MessageInfo, initMsg []byte, store PrefixStoreInfo, goapi wasmvm.GoAPI, querier QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.ContractResult, uint64, error) {
 	const CurrentOperation = ContractOperationInstantiate
-	var contractAddress = env.Contract.Address
+	contractAddress := env.Contract.Address
 
 	gasCalcFn, err := t.gasProcessor.GetGasCalculationFn(ctx, contractAddress)
 	if err != nil {
@@ -503,7 +503,7 @@ func (t *TrackingWasmerEngine) Instantiate(ctx sdk.Context, checksum wasmvm.Chec
 
 func (t *TrackingWasmerEngine) Execute(ctx sdk.Context, code wasmvm.Checksum, env wasmvmtypes.Env, info wasmvmtypes.MessageInfo, executeMsg []byte, store PrefixStoreInfo, goapi wasmvm.GoAPI, querier QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.ContractResult, uint64, error) {
 	const CurrentOperation = ContractOperationExecute
-	var contractAddress = env.Contract.Address
+	contractAddress := env.Contract.Address
 
 	gasCalcFn, err := t.gasProcessor.GetGasCalculationFn(ctx, contractAddress)
 	if err != nil {
@@ -559,7 +559,7 @@ func (t *TrackingWasmerEngine) Execute(ctx sdk.Context, code wasmvm.Checksum, en
 
 func (t *TrackingWasmerEngine) Migrate(ctx sdk.Context, checksum wasmvm.Checksum, env wasmvmtypes.Env, migrateMsg []byte, store PrefixStoreInfo, goapi wasmvm.GoAPI, querier QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.ContractResult, uint64, error) {
 	const CurrentOperation = ContractOperationMigrate
-	var contractAddress = env.Contract.Address
+	contractAddress := env.Contract.Address
 
 	gasCalcFn, err := t.gasProcessor.GetGasCalculationFn(ctx, contractAddress)
 	if err != nil {
@@ -670,7 +670,7 @@ func (t *TrackingWasmerEngine) MigrateWithInfo(ctx sdk.Context, checksum wasmvm.
 
 func (t *TrackingWasmerEngine) Sudo(ctx sdk.Context, checksum wasmvm.Checksum, env wasmvmtypes.Env, sudoMsg []byte, store PrefixStoreInfo, goapi wasmvm.GoAPI, querier QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.ContractResult, uint64, error) {
 	const CurrentOperation = ContractOperationSudo
-	var contractAddress = env.Contract.Address
+	contractAddress := env.Contract.Address
 
 	gasCalcFn, err := t.gasProcessor.GetGasCalculationFn(ctx, contractAddress)
 	if err != nil {
@@ -726,7 +726,7 @@ func (t *TrackingWasmerEngine) Sudo(ctx sdk.Context, checksum wasmvm.Checksum, e
 
 func (t *TrackingWasmerEngine) Reply(ctx sdk.Context, checksum wasmvm.Checksum, env wasmvmtypes.Env, reply wasmvmtypes.Reply, store PrefixStoreInfo, goapi wasmvm.GoAPI, querier QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.ContractResult, uint64, error) {
 	const CurrentOperation = ContractOperationReply
-	var contractAddress = env.Contract.Address
+	contractAddress := env.Contract.Address
 
 	gasCalcFn, err := t.gasProcessor.GetGasCalculationFn(ctx, contractAddress)
 	if err != nil {
@@ -794,7 +794,7 @@ func (t *TrackingWasmerEngine) GetPinnedMetrics() (*wasmvmtypes.PinnedMetrics, e
 
 func (t *TrackingWasmerEngine) IBCChannelOpen(ctx sdk.Context, checksum wasmvm.Checksum, env wasmvmtypes.Env, channel wasmvmtypes.IBCChannelOpenMsg, store PrefixStoreInfo, goapi wasmvm.GoAPI, querier QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.IBCChannelOpenResult, uint64, error) {
 	const CurrentOperation = ContractOperationIbcChannelOpen
-	var contractAddress = env.Contract.Address
+	contractAddress := env.Contract.Address
 
 	gasCalcFn, err := t.gasProcessor.GetGasCalculationFn(ctx, contractAddress)
 	if err != nil {
@@ -850,7 +850,7 @@ func (t *TrackingWasmerEngine) IBCChannelOpen(ctx sdk.Context, checksum wasmvm.C
 
 func (t *TrackingWasmerEngine) IBCChannelConnect(ctx sdk.Context, checksum wasmvm.Checksum, env wasmvmtypes.Env, channel wasmvmtypes.IBCChannelConnectMsg, store PrefixStoreInfo, goapi wasmvm.GoAPI, querier QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.IBCBasicResult, uint64, error) {
 	const CurrentOperation = ContractOperationIbcChannelConnect
-	var contractAddress = env.Contract.Address
+	contractAddress := env.Contract.Address
 
 	gasCalcFn, err := t.gasProcessor.GetGasCalculationFn(ctx, contractAddress)
 	if err != nil {
@@ -906,7 +906,7 @@ func (t *TrackingWasmerEngine) IBCChannelConnect(ctx sdk.Context, checksum wasmv
 
 func (t *TrackingWasmerEngine) IBCChannelClose(ctx sdk.Context, checksum wasmvm.Checksum, env wasmvmtypes.Env, channel wasmvmtypes.IBCChannelCloseMsg, store PrefixStoreInfo, goapi wasmvm.GoAPI, querier QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.IBCBasicResult, uint64, error) {
 	const CurrentOperation = ContractOperationIbcChannelClose
-	var contractAddress = env.Contract.Address
+	contractAddress := env.Contract.Address
 
 	gasCalcFn, err := t.gasProcessor.GetGasCalculationFn(ctx, contractAddress)
 	if err != nil {
@@ -962,7 +962,7 @@ func (t *TrackingWasmerEngine) IBCChannelClose(ctx sdk.Context, checksum wasmvm.
 
 func (t *TrackingWasmerEngine) IBCPacketReceive(ctx sdk.Context, checksum wasmvm.Checksum, env wasmvmtypes.Env, packet wasmvmtypes.IBCPacketReceiveMsg, store PrefixStoreInfo, goapi wasmvm.GoAPI, querier QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.IBCReceiveResult, uint64, error) {
 	const CurrentOperation = ContractOperationIbcPacketReceive
-	var contractAddress = env.Contract.Address
+	contractAddress := env.Contract.Address
 
 	gasCalcFn, err := t.gasProcessor.GetGasCalculationFn(ctx, contractAddress)
 	if err != nil {
@@ -1018,7 +1018,7 @@ func (t *TrackingWasmerEngine) IBCPacketReceive(ctx sdk.Context, checksum wasmvm
 
 func (t *TrackingWasmerEngine) IBCPacketAck(ctx sdk.Context, checksum wasmvm.Checksum, env wasmvmtypes.Env, ack wasmvmtypes.IBCPacketAckMsg, store PrefixStoreInfo, goapi wasmvm.GoAPI, querier QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.IBCBasicResult, uint64, error) {
 	const CurrentOperation = ContractOperationIbcPacketAck
-	var contractAddress = env.Contract.Address
+	contractAddress := env.Contract.Address
 
 	gasCalcFn, err := t.gasProcessor.GetGasCalculationFn(ctx, contractAddress)
 	if err != nil {
@@ -1074,7 +1074,7 @@ func (t *TrackingWasmerEngine) IBCPacketAck(ctx sdk.Context, checksum wasmvm.Che
 
 func (t *TrackingWasmerEngine) IBCPacketTimeout(ctx sdk.Context, checksum wasmvm.Checksum, env wasmvmtypes.Env, packet wasmvmtypes.IBCPacketTimeoutMsg, store PrefixStoreInfo, goapi wasmvm.GoAPI, querier QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.IBCBasicResult, uint64, error) {
 	const CurrentOperation = ContractOperationIbcPacketTimeout
-	var contractAddress = env.Contract.Address
+	contractAddress := env.Contract.Address
 
 	gasCalcFn, err := t.gasProcessor.GetGasCalculationFn(ctx, contractAddress)
 	if err != nil {

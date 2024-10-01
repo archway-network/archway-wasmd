@@ -39,8 +39,7 @@ type ContractGasProcessor interface {
 }
 
 // NoOpContractGasProcessor is no-op gas processor
-type NoOpContractGasProcessor struct {
-}
+type NoOpContractGasProcessor struct{}
 
 var _ ContractGasProcessor = &NoOpContractGasProcessor{}
 
