@@ -5,16 +5,18 @@ import (
 	"math/rand"
 	"testing"
 
-	"cosmossdk.io/log"
-	store "cosmossdk.io/store"
-	storemetrics "cosmossdk.io/store/metrics"
-	storetypes "cosmossdk.io/store/types"
 	cosmwasm "github.com/CosmWasm/wasmvm"
 	wasmvmtypes "github.com/CosmWasm/wasmvm/types"
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	db "github.com/cosmos/cosmos-db"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
+
+	"cosmossdk.io/log"
+	store "cosmossdk.io/store"
+	storemetrics "cosmossdk.io/store/metrics"
+	storetypes "cosmossdk.io/store/types"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 type testError struct{}
@@ -32,9 +34,11 @@ type loggingVMLog struct {
 
 type loggingVMLogs []loggingVMLog
 
-var _ QuerierWithCtx = &testQuerier{}
-var _ BareWasmVM = &loggingVM{}
-var _ ContractGasProcessor = &testGasProcessor{}
+var (
+	_ QuerierWithCtx       = &testQuerier{}
+	_ BareWasmVM           = &loggingVM{}
+	_ ContractGasProcessor = &testGasProcessor{}
+)
 
 type testGasProcessor struct {
 	ingestedRecords []ContractGasRecord

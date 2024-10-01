@@ -5,6 +5,7 @@ import (
 	wasmvmtypes "github.com/CosmWasm/wasmvm/types"
 
 	storetypes "cosmossdk.io/store/types"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 

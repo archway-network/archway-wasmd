@@ -9,9 +9,9 @@ import (
 
 	errorsmod "cosmossdk.io/errors"
 
-	"github.com/CosmWasm/wasmd/x/wasm/types"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"github.com/CosmWasm/wasmd/x/wasm/types"
 )
 
 var _ types.WasmEngine = &MockWasmEngine{}
@@ -42,7 +42,7 @@ type MockWasmEngine struct {
 }
 
 func (m *MockWasmEngine) SetGasRecorder(gasRecorder types.ContractGasProcessor) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
