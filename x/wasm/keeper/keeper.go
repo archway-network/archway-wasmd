@@ -99,7 +99,6 @@ type Keeper struct {
 	maxQueryStackSize    uint32
 	maxCallDepth         uint32
 	acceptedAccountTypes map[reflect.Type]struct{}
-	maxCallDepth         uint32
 	accountPruner        AccountPruner
 	params               collections.Item[types.Params]
 	// propagate gov authZ to sub-messages
@@ -1047,24 +1046,6 @@ func (k Keeper) IterateContractInfo(ctx context.Context, cb func(sdk.AccAddress,
 			break
 		}
 	}
-}
-
-func checkAndIncreaseCallDepth(ctx context.Context, maxCallDepth uint32) (sdk.Context, error) {
-	var callDepth uint32 = 0
-	if size, ok := types.CallDepth(ctx); ok {
-		callDepth = size
-	}
-
-	// increase
-	callDepth++
-
-	// did we go too far?
-	if callDepth > maxCallDepth {
-		return sdk.Context{}, types.ErrExceedMaxCallDepth
-	}
-
-	// set updated stack size
-	return types.WithCallDepth(sdk.UnwrapSDKContext(ctx), callDepth), nil
 }
 
 // IterateContractState iterates through all elements of the key value store for the given contract address and passes

@@ -243,11 +243,7 @@ func TestDispatchSubMsgErrorHandling(t *testing.T) {
 		"send tokens": {
 			submsgID:         5,
 			msg:              validBankSend,
-<<<<<<< HEAD
-			resultAssertions: []assertion{assertReturnedEvents(0), assertGasUsed(110_000, 112_000)},
-=======
 			resultAssertions: []assertion{assertReturnedEvents(0), assertGasUsed(110_000, 114_000)},
->>>>>>> 91c89083... fix: apply patch for CWA-2024-004
 		},
 		"not enough tokens": {
 			submsgID:    6,
