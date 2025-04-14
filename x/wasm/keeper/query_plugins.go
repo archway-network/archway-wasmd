@@ -94,7 +94,7 @@ func (q QueryHandler) GasConsumed() uint64 {
 	return q.gasRegister.ToWasmVMGas(q.Ctx.GasMeter().GasConsumed())
 }
 
-func (q QueryHandler) GetCtx() *sdk.Context {
+func (q *QueryHandler) GetCtx() *sdk.Context {
 	return &q.Ctx
 }
 
