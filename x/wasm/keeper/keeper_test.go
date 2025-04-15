@@ -423,7 +423,7 @@ func TestInstantiate(t *testing.T) {
 
 	gasAfter := ctx.GasMeter().GasConsumed()
 	if types.EnableGasVerification {
-		require.Equal(t, uint64(0x1bca5), gasAfter-gasBefore)
+		require.Equal(t, uint64(0x1e059), gasAfter-gasBefore)
 	}
 
 	// ensure it is stored properly
@@ -806,7 +806,7 @@ func TestInstantiateWithContractDataResponse(t *testing.T) {
 	ctx, keepers := CreateTestInput(t, false, AvailableCapabilities)
 
 	wasmEngineMock := &wasmtesting.MockWasmEngine{
-		InstantiateFn: func(codeID wasmvm.Checksum, env wasmvmtypes.Env, info wasmvmtypes.MessageInfo, initMsg []byte, store wasmvm.KVStore, goapi wasmvm.GoAPI, querier wasmvm.Querier, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.ContractResult, uint64, error) {
+		InstantiateFn: func(codeID wasmvm.Checksum, env wasmvmtypes.Env, info wasmvmtypes.MessageInfo, initMsg []byte, store types.PrefixStoreInfo, goapi wasmvm.GoAPI, querier types.QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.ContractResult, uint64, error) {
 			return &wasmvmtypes.ContractResult{Ok: &wasmvmtypes.Response{Data: []byte("my-response-data")}}, 0, nil
 		},
 		AnalyzeCodeFn: wasmtesting.WithoutIBCAnalyzeFn,
@@ -831,10 +831,10 @@ func TestInstantiateWithContractFactoryChildQueriesParent(t *testing.T) {
 	keeper := keepers.WasmKeeper
 
 	var instantiationCount int
-	callbacks := make([]func(codeID wasmvm.Checksum, env wasmvmtypes.Env, info wasmvmtypes.MessageInfo, initMsg []byte, store wasmvm.KVStore, goapi wasmvm.GoAPI, querier wasmvm.Querier, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.ContractResult, uint64, error), 2)
+	callbacks := make([]func(codeID wasmvm.Checksum, env wasmvmtypes.Env, info wasmvmtypes.MessageInfo, initMsg []byte, store types.PrefixStoreInfo, goapi wasmvm.GoAPI, querier types.QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.ContractResult, uint64, error), 2)
 	wasmEngineMock := &wasmtesting.MockWasmEngine{
 		// dispatch instantiation calls to callbacks
-		InstantiateFn: func(codeID wasmvm.Checksum, env wasmvmtypes.Env, info wasmvmtypes.MessageInfo, initMsg []byte, store wasmvm.KVStore, goapi wasmvm.GoAPI, querier wasmvm.Querier, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.ContractResult, uint64, error) {
+		InstantiateFn: func(codeID wasmvm.Checksum, env wasmvmtypes.Env, info wasmvmtypes.MessageInfo, initMsg []byte, store types.PrefixStoreInfo, goapi wasmvm.GoAPI, querier types.QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.ContractResult, uint64, error) {
 			require.Greater(t, len(callbacks), instantiationCount, "unexpected call to instantiation")
 			do := callbacks[instantiationCount]
 			instantiationCount++
@@ -854,7 +854,7 @@ func TestInstantiateWithContractFactoryChildQueriesParent(t *testing.T) {
 
 	example := StoreRandomContract(t, ctx, keepers, wasmEngineMock)
 	// factory contract
-	callbacks[0] = func(codeID wasmvm.Checksum, env wasmvmtypes.Env, info wasmvmtypes.MessageInfo, initMsg []byte, store wasmvm.KVStore, goapi wasmvm.GoAPI, querier wasmvm.Querier, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.ContractResult, uint64, error) {
+	callbacks[0] = func(codeID wasmvm.Checksum, env wasmvmtypes.Env, info wasmvmtypes.MessageInfo, initMsg []byte, store types.PrefixStoreInfo, goapi wasmvm.GoAPI, querier types.QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.ContractResult, uint64, error) {
 		t.Log("called factory")
 		return &wasmvmtypes.ContractResult{
 			Ok: &wasmvmtypes.Response{
@@ -876,9 +876,22 @@ func TestInstantiateWithContractFactoryChildQueriesParent(t *testing.T) {
 	// child contract
 	var capturedSenderAddr string
 	var capturedCodeInfo []byte
-	callbacks[1] = func(codeID wasmvm.Checksum, env wasmvmtypes.Env, info wasmvmtypes.MessageInfo, initMsg []byte, store wasmvm.KVStore, goapi wasmvm.GoAPI, querier wasmvm.Querier, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.ContractResult, uint64, error) {
+	callbacks[1] = func(codeID wasmvm.Checksum, env wasmvmtypes.Env, info wasmvmtypes.MessageInfo, initMsg []byte, store types.PrefixStoreInfo, goapi wasmvm.GoAPI, querier types.QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.ContractResult, uint64, error) {
 		t.Log("called child")
 		capturedSenderAddr = info.Sender
+
+		// Initialize gas tracking for contract
+		initialGasMeter := types.NewContractGasMeter(30000000, func(_ uint64, info types.GasConsumptionInfo) types.GasConsumptionInfo {
+			return types.GasConsumptionInfo{
+				SDKGas: info.SDKGas * 2,
+			}
+		}, capturedSenderAddr, types.ContractOperationQuery)
+
+		q := querier.(*QueryHandler) // get query handler context to start gas tracking otherwise an error will happen
+		e := types.InitializeGasTracking(&q.Ctx, &initialGasMeter)
+
+		require.NoError(t, e, "could not start contract gas tracking")
+
 		var err error
 		capturedCodeInfo, err = querier.Query(wasmvmtypes.QueryRequest{
 			Wasm: &wasmvmtypes.WasmQuery{
@@ -960,7 +973,7 @@ func TestExecute(t *testing.T) {
 	// make sure gas is properly deducted from ctx
 	gasAfter := ctx.GasMeter().GasConsumed()
 	if types.EnableGasVerification {
-		require.Equal(t, uint64(0x1acdb), gasAfter-gasBefore)
+		require.Equal(t, uint64(0x1b38d), gasAfter-gasBefore)
 	}
 	// ensure bob now exists and got both payments released
 	bobAcct = accKeeper.GetAccount(ctx, bob)
@@ -1619,10 +1632,10 @@ func TestIterateContractsByCode(t *testing.T) {
 func TestIterateContractsByCodeWithMigration(t *testing.T) {
 	// mock migration so that it does not fail when migrate example1 to example2.codeID
 	mockWasmVM := wasmtesting.MockWasmEngine{
-		MigrateFn: func(codeID wasmvm.Checksum, env wasmvmtypes.Env, migrateMsg []byte, store wasmvm.KVStore, goapi wasmvm.GoAPI, querier wasmvm.Querier, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.ContractResult, uint64, error) {
+		MigrateFn: func(codeID wasmvm.Checksum, env wasmvmtypes.Env, migrateMsg []byte, store types.PrefixStoreInfo, goapi wasmvm.GoAPI, querier types.QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.ContractResult, uint64, error) {
 			return &wasmvmtypes.ContractResult{Ok: &wasmvmtypes.Response{}}, 1, nil
 		},
-		MigrateWithInfoFn: func(codeID wasmvm.Checksum, env wasmvmtypes.Env, migrateMsg []byte, migrateInfo wasmvmtypes.MigrateInfo, store wasmvm.KVStore, goapi wasmvm.GoAPI, querier wasmvm.Querier, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.ContractResult, uint64, error) {
+		MigrateWithInfoFn: func(codeID wasmvm.Checksum, env wasmvmtypes.Env, migrateMsg []byte, migrateInfo wasmvmtypes.MigrateInfo, store types.PrefixStoreInfo, goapi wasmvm.GoAPI, querier types.QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.ContractResult, uint64, error) {
 			return &wasmvmtypes.ContractResult{Ok: &wasmvmtypes.Response{}}, 1, nil
 		},
 	}
@@ -1993,7 +2006,7 @@ func TestPinnedContractLoops(t *testing.T) {
 	require.NoError(t, k.pinCode(ctx, example.CodeID))
 	var loops int
 	anyMsg := []byte(`{}`)
-	mock.ExecuteFn = func(codeID wasmvm.Checksum, env wasmvmtypes.Env, info wasmvmtypes.MessageInfo, executeMsg []byte, store wasmvm.KVStore, goapi wasmvm.GoAPI, querier wasmvm.Querier, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.ContractResult, uint64, error) {
+	mock.ExecuteFn = func(codeID wasmvm.Checksum, env wasmvmtypes.Env, info wasmvmtypes.MessageInfo, executeMsg []byte, store types.PrefixStoreInfo, goapi wasmvm.GoAPI, querier types.QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.ContractResult, uint64, error) {
 		loops++
 		return &wasmvmtypes.ContractResult{
 			Ok: &wasmvmtypes.Response{
@@ -2110,21 +2123,31 @@ func TestReply(t *testing.T) {
 	wasmtesting.MakeInstantiable(&mock)
 	example := SeedNewContractInstance(t, ctx, keepers, &mock)
 
+	initialGasMeter := types.NewContractGasMeter(30000000, func(_ uint64, info types.GasConsumptionInfo) types.GasConsumptionInfo {
+		return types.GasConsumptionInfo{
+			SDKGas: info.SDKGas * 2,
+		}
+	}, example.Contract.String(), types.ContractOperationQuery)
+
+	// { Initialization
+	err := types.InitializeGasTracking(&ctx, &initialGasMeter)
+	require.NoError(t, err, "could not start contract gas tracking")
+
 	specs := map[string]struct {
-		replyFn func(codeID wasmvm.Checksum, env wasmvmtypes.Env, reply wasmvmtypes.Reply, store wasmvm.KVStore, goapi wasmvm.GoAPI, querier wasmvm.Querier, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.Response, uint64, error)
+		replyFn func(codeID wasmvm.Checksum, env wasmvmtypes.Env, reply wasmvmtypes.Reply, store types.PrefixStoreInfo, goapi wasmvm.GoAPI, querier types.QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.Response, uint64, error)
 		expData []byte
 		expErr  bool
 		expEvt  sdk.Events
 	}{
 		"all good": {
-			replyFn: func(codeID wasmvm.Checksum, env wasmvmtypes.Env, reply wasmvmtypes.Reply, store wasmvm.KVStore, goapi wasmvm.GoAPI, querier wasmvm.Querier, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.Response, uint64, error) {
+			replyFn: func(codeID wasmvm.Checksum, env wasmvmtypes.Env, reply wasmvmtypes.Reply, store types.PrefixStoreInfo, goapi wasmvm.GoAPI, querier types.QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.Response, uint64, error) {
 				return &wasmvmtypes.Response{Data: []byte("foo")}, 1, nil
 			},
 			expData: []byte("foo"),
 			expEvt:  sdk.Events{sdk.NewEvent("reply", sdk.NewAttribute("_contract_address", example.Contract.String()))},
 		},
 		"with query": {
-			replyFn: func(codeID wasmvm.Checksum, env wasmvmtypes.Env, reply wasmvmtypes.Reply, store wasmvm.KVStore, goapi wasmvm.GoAPI, querier wasmvm.Querier, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.Response, uint64, error) {
+			replyFn: func(codeID wasmvm.Checksum, env wasmvmtypes.Env, reply wasmvmtypes.Reply, store types.PrefixStoreInfo, goapi wasmvm.GoAPI, querier types.QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.Response, uint64, error) {
 				bzRsp, err := querier.Query(wasmvmtypes.QueryRequest{
 					Bank: &wasmvmtypes.BankQuery{
 						Balance: &wasmvmtypes.BalanceQuery{Address: env.Contract.Address, Denom: "stake"},
@@ -2140,7 +2163,7 @@ func TestReply(t *testing.T) {
 			expEvt:  sdk.Events{sdk.NewEvent("reply", sdk.NewAttribute("_contract_address", example.Contract.String()))},
 		},
 		"with query error handled": {
-			replyFn: func(codeID wasmvm.Checksum, env wasmvmtypes.Env, reply wasmvmtypes.Reply, store wasmvm.KVStore, goapi wasmvm.GoAPI, querier wasmvm.Querier, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.Response, uint64, error) {
+			replyFn: func(codeID wasmvm.Checksum, env wasmvmtypes.Env, reply wasmvmtypes.Reply, store types.PrefixStoreInfo, goapi wasmvm.GoAPI, querier types.QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.Response, uint64, error) {
 				bzRsp, err := querier.Query(wasmvmtypes.QueryRequest{}, 0)
 				require.Error(t, err)
 				assert.Nil(t, bzRsp)
@@ -2150,7 +2173,7 @@ func TestReply(t *testing.T) {
 			expEvt:  sdk.Events{sdk.NewEvent("reply", sdk.NewAttribute("_contract_address", example.Contract.String()))},
 		},
 		"error": {
-			replyFn: func(codeID wasmvm.Checksum, env wasmvmtypes.Env, reply wasmvmtypes.Reply, store wasmvm.KVStore, goapi wasmvm.GoAPI, querier wasmvm.Querier, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.Response, uint64, error) {
+			replyFn: func(codeID wasmvm.Checksum, env wasmvmtypes.Env, reply wasmvmtypes.Reply, store types.PrefixStoreInfo, goapi wasmvm.GoAPI, querier types.QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.Response, uint64, error) {
 				return nil, 1, errors.New("testing")
 			},
 			expErr: true,
@@ -2158,7 +2181,7 @@ func TestReply(t *testing.T) {
 	}
 	for name, spec := range specs {
 		t.Run(name, func(t *testing.T) {
-			mock.ReplyFn = func(codeID wasmvm.Checksum, env wasmvmtypes.Env, reply wasmvmtypes.Reply, store wasmvm.KVStore, goapi wasmvm.GoAPI, querier wasmvm.Querier, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.ContractResult, uint64, error) {
+			mock.ReplyFn = func(codeID wasmvm.Checksum, env wasmvmtypes.Env, reply wasmvmtypes.Reply, store types.PrefixStoreInfo, goapi wasmvm.GoAPI, querier types.QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.ContractResult, uint64, error) {
 				resp, gasUsed, err := spec.replyFn(codeID, env, reply, store, goapi, querier, gasMeter, gasLimit, deserCost)
 				return &wasmvmtypes.ContractResult{
 					Ok: resp,
@@ -2353,6 +2376,17 @@ func TestQueryIsolation(t *testing.T) {
 	var mock wasmtesting.MockWasmEngine
 	wasmtesting.MakeInstantiable(&mock)
 	example := SeedNewContractInstance(t, ctx, keepers, &mock)
+
+	initialGasMeter := types.NewContractGasMeter(30000000, func(_ uint64, info types.GasConsumptionInfo) types.GasConsumptionInfo {
+		return types.GasConsumptionInfo{
+			SDKGas: info.SDKGas * 2,
+		}
+	}, example.Contract.String(), types.ContractOperationQuery)
+
+	// { Initialization
+	err := types.InitializeGasTracking(&ctx, &initialGasMeter)
+	require.NoError(t, err, "could not start contract gas tracking")
+
 	WithQueryHandlerDecorator(func(other WasmVMQueryHandler) WasmVMQueryHandler {
 		return WasmVMQueryHandlerFn(func(ctx sdk.Context, caller sdk.AccAddress, request wasmvmtypes.QueryRequest) ([]byte, error) {
 			if request.Custom == nil {
@@ -2365,7 +2399,7 @@ func TestQueryIsolation(t *testing.T) {
 	}).apply(k)
 
 	// when
-	mock.ReplyFn = func(codeID wasmvm.Checksum, env wasmvmtypes.Env, reply wasmvmtypes.Reply, store wasmvm.KVStore, goapi wasmvm.GoAPI, querier wasmvm.Querier, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.ContractResult, uint64, error) {
+	mock.ReplyFn = func(codeID wasmvm.Checksum, env wasmvmtypes.Env, reply wasmvmtypes.Reply, store types.PrefixStoreInfo, goapi wasmvm.GoAPI, querier types.QuerierWithCtx, gasMeter wasmvm.GasMeter, gasLimit uint64, deserCost wasmvmtypes.UFraction) (*wasmvmtypes.ContractResult, uint64, error) {
 		_, err := querier.Query(wasmvmtypes.QueryRequest{
 			Custom: []byte(`{}`),
 		}, 10000*types.DefaultGasMultiplier)

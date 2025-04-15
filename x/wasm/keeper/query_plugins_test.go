@@ -10,8 +10,6 @@ import (
 
 	wasmvmtypes "github.com/CosmWasm/wasmvm/v2/types"
 	abci "github.com/cometbft/cometbft/abci/types"
-	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
-	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/gogoproto/proto"
 	channeltypes "github.com/cosmos/ibc-go/v10/modules/core/04-channel/types"
 	"github.com/stretchr/testify/assert"
@@ -19,11 +17,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	errorsmod "cosmossdk.io/errors"
-	"cosmossdk.io/log"
 	sdkmath "cosmossdk.io/math"
-	"cosmossdk.io/store"
-	storemetrics "cosmossdk.io/store/metrics"
-	storetypes "cosmossdk.io/store/types"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -531,6 +525,18 @@ func TestCodeInfoWasmQuerier(t *testing.T) {
 }
 
 func TestQueryErrors(t *testing.T) {
+	ctx, _ := keeper.CreateTestInput(t, false, keeper.AvailableCapabilities)
+	initialGasMeter := types.NewContractGasMeter(30000000, func(_ uint64, info types.GasConsumptionInfo) types.GasConsumptionInfo {
+		return types.GasConsumptionInfo{
+			SDKGas: info.SDKGas * 2,
+		}
+	}, "foo", types.ContractOperationQuery)
+
+	// { Initialization
+	err := types.InitializeGasTracking(&ctx, &initialGasMeter)
+	require.NoError(t, err, "could not start contract gas tracking")
+	var e error = nil
+
 	specs := map[string]struct {
 		src    error
 		expErr error
@@ -538,19 +544,19 @@ func TestQueryErrors(t *testing.T) {
 		"no error": {},
 		"no such contract": {
 			src:    types.ErrNoSuchContractFn("contract-addr"),
-			expErr: wasmvmtypes.NoSuchContract{Addr: "contract-addr"},
+			expErr: fmt.Errorf("error while querying from wasm smart contract, querier error: %s, error: %s", wasmvmtypes.NoSuchContract{Addr: "contract-addr"}, e),
 		},
 		"no such contract - wrapped": {
 			src:    errorsmod.Wrap(types.ErrNoSuchContractFn("contract-addr"), "my additional data"),
-			expErr: wasmvmtypes.NoSuchContract{Addr: "contract-addr"},
+			expErr: fmt.Errorf("error while querying from wasm smart contract, querier error: %s, error: %s", wasmvmtypes.NoSuchContract{Addr: "contract-addr"}, e),
 		},
 		"no such code": {
 			src:    types.ErrNoSuchCodeFn(123),
-			expErr: wasmvmtypes.NoSuchCode{CodeID: 123},
+			expErr: fmt.Errorf("error while querying from wasm smart contract, querier error: %s, error: %s", wasmvmtypes.NoSuchCode{CodeID: 123}, e),
 		},
 		"no such code - wrapped": {
 			src:    errorsmod.Wrap(types.ErrNoSuchCodeFn(123), "my additional data"),
-			expErr: wasmvmtypes.NoSuchCode{CodeID: 123},
+			expErr: fmt.Errorf("error while querying from wasm smart contract, querier error: %s, error: %s", wasmvmtypes.NoSuchCode{CodeID: 123}, e),
 		},
 	}
 	for name, spec := range specs {
@@ -558,8 +564,6 @@ func TestQueryErrors(t *testing.T) {
 			mock := keeper.WasmVMQueryHandlerFn(func(ctx sdk.Context, caller sdk.AccAddress, request wasmvmtypes.QueryRequest) ([]byte, error) {
 				return nil, spec.src
 			})
-			ms := store.NewCommitMultiStore(dbm.NewMemDB(), log.NewTestLogger(t), storemetrics.NewNoOpMetrics())
-			ctx := sdk.NewContext(ms, cmtproto.Header{}, false, log.NewTestLogger(t)).WithGasMeter(storetypes.NewInfiniteGasMeter())
 			q := keeper.NewQueryHandler(ctx, mock, sdk.AccAddress{}, types.NewDefaultWasmGasRegister())
 			_, gotErr := q.Query(wasmvmtypes.QueryRequest{}, 1)
 			assert.Equal(t, spec.expErr, gotErr)

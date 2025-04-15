@@ -337,14 +337,15 @@ func (k Keeper) instantiate(
 	// create prefixed data store
 	// 0x03 | BuildContractAddressClassic (sdk.AccAddress)
 	prefixStoreKey := types.GetContractStorePrefix(contractAddress)
-	vmStore := types.NewStoreAdapter(prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(sdkCtx)), prefixStoreKey))
+	// vmStore := types.NewStoreAdapter(prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(sdkCtx)), prefixStoreKey))
+	prefixStore := types.PrefixStoreInfo{PrefixKey: prefixStoreKey, Store: runtime.KVStoreAdapter(k.storeService.OpenKVStore(sdkCtx))}
 
 	// prepare querier
 	querier := k.newQueryHandler(sdkCtx, contractAddress)
 
 	// instantiate wasm contract
-	gasLeft := k.runtimeGasForContract(sdkCtx)
-	res, gasUsed, err := k.wasmVM.Instantiate(codeInfo.CodeHash, env, info, initMsg, vmStore, cosmwasmAPI, querier, k.gasMeter(sdkCtx), gasLeft, costJSONDeserialization)
+	gas := k.runtimeGasForContract(sdkCtx)
+	res, gasUsed, err := k.wasmVM.Instantiate(sdkCtx, codeInfo.CodeHash, env, info, initMsg, prefixStore, cosmwasmAPI, &querier, k.gasMeter(sdkCtx), gas, costJSONDeserialization)
 	k.consumeRuntimeGas(sdkCtx, gasUsed)
 	if err != nil {
 		return nil, nil, errorsmod.Wrap(types.ErrVMError, err.Error())
@@ -408,7 +409,7 @@ func (k Keeper) instantiate(
 func (k Keeper) execute(ctx context.Context, contractAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins) ([]byte, error) {
 	defer telemetry.MeasureSince(time.Now(), "wasm", "contract", "execute")
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
-	contractInfo, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
+	contractInfo, codeInfo, prefixStore, err := k.contractInstance(sdkCtx, contractAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -430,8 +431,8 @@ func (k Keeper) execute(ctx context.Context, contractAddress, caller sdk.AccAddr
 
 	// prepare querier
 	querier := k.newQueryHandler(sdkCtx, contractAddress)
-	gasLeft := k.runtimeGasForContract(sdkCtx)
-	res, gasUsed, execErr := k.wasmVM.Execute(codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, k.gasMeter(sdkCtx), gasLeft, costJSONDeserialization)
+	gas := k.runtimeGasForContract(sdkCtx)
+	res, gasUsed, execErr := k.wasmVM.Execute(sdkCtx, codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, &querier, k.gasMeter(sdkCtx), gas, costJSONDeserialization)
 	k.consumeRuntimeGas(sdkCtx, gasUsed)
 	if execErr != nil {
 		return nil, errorsmod.Wrap(types.ErrVMError, execErr.Error())
@@ -584,14 +585,15 @@ func (k Keeper) callMigrateEntrypoint(
 	querier := k.newQueryHandler(sdkCtx, contractAddress)
 
 	prefixStoreKey := types.GetContractStorePrefix(contractAddress)
-	vmStore := types.NewStoreAdapter(prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(sdkCtx)), prefixStoreKey))
+	vmStore := runtime.KVStoreAdapter(k.storeService.OpenKVStore(sdkCtx))
+	prefixStore := types.PrefixStoreInfo{PrefixKey: prefixStoreKey, Store: vmStore}
 	gasLeft := k.runtimeGasForContract(sdkCtx)
 
 	migrateInfo := wasmvmtypes.MigrateInfo{
 		Sender:            senderAddress.String(),
 		OldMigrateVersion: oldMigrateVersion,
 	}
-	res, gasUsed, err := k.wasmVM.MigrateWithInfo(newChecksum, env, msg, migrateInfo, vmStore, cosmwasmAPI, &querier, k.gasMeter(sdkCtx), gasLeft, costJSONDeserialization)
+	res, gasUsed, err := k.wasmVM.MigrateWithInfo(sdkCtx, newChecksum, env, msg, migrateInfo, prefixStore, cosmwasmAPI, &querier, k.gasMeter(sdkCtx), gasLeft, costJSONDeserialization)
 
 	k.consumeRuntimeGas(sdkCtx, gasUsed)
 	if err != nil {
@@ -617,12 +619,12 @@ func (k Keeper) callMigrateEntrypoint(
 // This is an extension point for some very advanced scenarios only. Use with care!
 func (k Keeper) Sudo(ctx context.Context, contractAddress sdk.AccAddress, msg []byte) ([]byte, error) {
 	defer telemetry.MeasureSince(time.Now(), "wasm", "contract", "sudo")
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
 
-	contractInfo, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
+	contractInfo, codeInfo, prefixStore, err := k.contractInstance(sdkCtx, contractAddress)
 	if err != nil {
 		return nil, err
 	}
-	sdkCtx := sdk.UnwrapSDKContext(ctx)
 	sdkCtx, discount := k.checkDiscountEligibility(sdkCtx, codeInfo.CodeHash, k.IsPinnedCode(ctx, contractInfo.CodeID))
 	setupCost := k.gasRegister.SetupContractCost(discount, len(msg))
 
@@ -632,8 +634,8 @@ func (k Keeper) Sudo(ctx context.Context, contractAddress sdk.AccAddress, msg []
 
 	// prepare querier
 	querier := k.newQueryHandler(sdkCtx, contractAddress)
-	gasLeft := k.runtimeGasForContract(sdkCtx)
-	res, gasUsed, execErr := k.wasmVM.Sudo(codeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, querier, k.gasMeter(sdkCtx), gasLeft, costJSONDeserialization)
+	gas := k.runtimeGasForContract(sdkCtx)
+	res, gasUsed, execErr := k.wasmVM.Sudo(sdkCtx, codeInfo.CodeHash, env, msg, prefixStore, cosmwasmAPI, &querier, k.gasMeter(sdkCtx), gas, costJSONDeserialization)
 	k.consumeRuntimeGas(sdkCtx, gasUsed)
 	if execErr != nil {
 		return nil, errorsmod.Wrap(types.ErrVMError, execErr.Error())
@@ -676,7 +678,7 @@ func (k Keeper) reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply was
 	querier := k.newQueryHandler(ctx, contractAddress)
 	gasLeft := k.runtimeGasForContract(ctx)
 
-	res, gasUsed, execErr := k.wasmVM.Reply(codeInfo.CodeHash, env, reply, prefixStore, cosmwasmAPI, querier, k.gasMeter(ctx), gasLeft, costJSONDeserialization)
+	res, gasUsed, execErr := k.wasmVM.Reply(ctx, codeInfo.CodeHash, env, reply, prefixStore, cosmwasmAPI, &querier, k.gasMeter(ctx), gasLeft, costJSONDeserialization)
 	k.consumeRuntimeGas(ctx, gasUsed)
 	if execErr != nil {
 		return nil, errorsmod.Wrap(types.ErrVMError, execErr.Error())
@@ -868,7 +870,7 @@ func (k Keeper) QuerySmart(ctx context.Context, contractAddr sdk.AccAddress, req
 	querier := k.newQueryHandler(sdkCtx, contractAddr)
 
 	env := types.NewEnv(sdkCtx, contractAddr)
-	queryResult, gasUsed, qErr := k.wasmVM.Query(codeInfo.CodeHash, env, req, prefixStore, cosmwasmAPI, querier, k.gasMeter(sdkCtx), k.runtimeGasForContract(sdkCtx), costJSONDeserialization)
+	queryResult, gasUsed, qErr := k.wasmVM.Query(sdkCtx, codeInfo.CodeHash, env, req, prefixStore, cosmwasmAPI, &querier, k.gasMeter(sdkCtx), k.runtimeGasForContract(sdkCtx), costJSONDeserialization)
 	k.consumeRuntimeGas(sdkCtx, gasUsed)
 	if qErr != nil {
 		return nil, errorsmod.Wrap(types.ErrVMError, qErr.Error())
@@ -926,16 +928,15 @@ func (k Keeper) QueryRaw(ctx context.Context, contractAddress sdk.AccAddress, ke
 	return prefixStore.Get(key)
 }
 
-// internal helper function
-func (k Keeper) contractInstance(ctx context.Context, contractAddress sdk.AccAddress) (types.ContractInfo, types.CodeInfo, wasmvm.KVStore, error) {
+func (k Keeper) contractInstance(ctx context.Context, contractAddress sdk.AccAddress) (types.ContractInfo, types.CodeInfo, types.PrefixStoreInfo, error) {
 	store := k.storeService.OpenKVStore(ctx)
 
 	contractBz, err := store.Get(types.GetContractAddressKey(contractAddress))
 	if err != nil {
-		return types.ContractInfo{}, types.CodeInfo{}, nil, err
+		return types.ContractInfo{}, types.CodeInfo{}, types.PrefixStoreInfo{}, err
 	}
 	if contractBz == nil {
-		return types.ContractInfo{}, types.CodeInfo{}, nil, types.ErrNoSuchContractFn(contractAddress.String()).
+		return types.ContractInfo{}, types.CodeInfo{}, types.PrefixStoreInfo{}, types.ErrNoSuchContractFn(contractAddress.String()).
 			Wrapf("address %s", contractAddress.String())
 	}
 	var contractInfo types.ContractInfo
@@ -943,18 +944,19 @@ func (k Keeper) contractInstance(ctx context.Context, contractAddress sdk.AccAdd
 
 	codeInfoBz, err := store.Get(types.GetCodeKey(contractInfo.CodeID))
 	if err != nil {
-		return types.ContractInfo{}, types.CodeInfo{}, nil, err
+		return types.ContractInfo{}, types.CodeInfo{}, types.PrefixStoreInfo{}, err
 	}
 
 	if codeInfoBz == nil {
-		return contractInfo, types.CodeInfo{}, nil, types.ErrNoSuchCodeFn(contractInfo.CodeID).
+		return contractInfo, types.CodeInfo{}, types.PrefixStoreInfo{}, types.ErrNoSuchCodeFn(contractInfo.CodeID).
 			Wrapf("code id %d", contractInfo.CodeID)
 	}
 	var codeInfo types.CodeInfo
 	k.cdc.MustUnmarshal(codeInfoBz, &codeInfo)
 	prefixStoreKey := types.GetContractStorePrefix(contractAddress)
-	prefixStore := prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx)), prefixStoreKey)
-	return contractInfo, codeInfo, types.NewStoreAdapter(prefixStore), nil
+	// prefixStore := prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(ctx)), prefixStoreKey)
+	prefixStore := types.PrefixStoreInfo{PrefixKey: prefixStoreKey, Store: runtime.KVStoreAdapter(store)}
+	return contractInfo, codeInfo, prefixStore, nil
 }
 
 func (k Keeper) LoadAsyncAckPacket(ctx context.Context, portID, channelID string, sequence uint64) (channeltypes.Packet, error) {
