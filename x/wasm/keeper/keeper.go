@@ -585,7 +585,7 @@ func (k Keeper) callMigrateEntrypoint(
 	querier := k.newQueryHandler(sdkCtx, contractAddress)
 
 	prefixStoreKey := types.GetContractStorePrefix(contractAddress)
-	vmStore := prefix.NewStore(runtime.KVStoreAdapter(k.storeService.OpenKVStore(sdkCtx)), prefixStoreKey)
+	vmStore := runtime.KVStoreAdapter(k.storeService.OpenKVStore(sdkCtx))
 	prefixStore := types.PrefixStoreInfo{PrefixKey: prefixStoreKey, Store: vmStore}
 	gasLeft := k.runtimeGasForContract(sdkCtx)
 
